@@ -1,15 +1,15 @@
 {
   "name": "baekjoon-card",
   "version": "1.0.0",
-  "description": "Baekjoon profile card API with GitHub-like style and pie chart",
+  "description": "Baekjoon profile card API with GitHub-like style, pie chart and animation using @napi-rs/canvas",
   "main": "api/baekjoon.js",
   "scripts": {
     "start": "node api/baekjoon.js",
     "deploy": "vercel --prod"
   },
   "dependencies": {
-    "axios": "^1.5.0",
-    "canvas": "^2.11.2"
+    "@napi-rs/canvas": "^0.1.42",
+    "axios": "^1.5.0"
   },
   "engines": {
     "node": ">=16"
@@ -19,7 +19,8 @@
     "github-card",
     "leetcode-style",
     "vercel",
-    "api"
+    "api",
+    "canvas"
   ],
   "author": "lighteko",
   "license": "MIT"
