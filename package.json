@@ -1,0 +1,26 @@
+{
+  "name": "baekjoon-card",
+  "version": "1.0.0",
+  "description": "Baekjoon profile card API with GitHub-like style and pie chart",
+  "main": "api/baekjoon.js",
+  "scripts": {
+    "start": "node api/baekjoon.js",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "canvas": "^2.11.2"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "keywords": [
+    "baekjoon",
+    "github-card",
+    "leetcode-style",
+    "vercel",
+    "api"
+  ],
+  "author": "lighteko",
+  "license": "MIT"
+}
