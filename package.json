@@ -1,14 +1,13 @@
 {
-  "name": "baekjoon-card",
+  "name": "baekjoon-stats-card",
   "version": "1.0.0",
-  "description": "Baekjoon profile card API with GitHub-like style, pie chart and animation using @napi-rs/canvas",
+  "description": "Dynamic Baekjoon stats card API in the style of github-readme-stats",
   "main": "api/baekjoon.js",
   "scripts": {
     "start": "node api/baekjoon.js",
     "deploy": "vercel --prod"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.42",
     "axios": "^1.5.0"
   },
   "engines": {
@@ -16,11 +15,10 @@
   },
   "keywords": [
     "baekjoon",
-    "github-card",
-    "leetcode-style",
+    "stats",
+    "github-readme-stats",
     "vercel",
-    "api",
-    "canvas"
+    "svg"
   ],
   "author": "lighteko",
   "license": "MIT"
