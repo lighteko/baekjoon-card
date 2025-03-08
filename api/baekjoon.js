@@ -99,7 +99,7 @@ function sendErrorCard(res, message) {
         width="400" height="120"
         rx="8"
         fill="#101010"
-        stroke="#30363d" stroke-width="2"
+        stroke="#404040" stroke-width="2"
       />
       <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold">${message}</text>
     </svg>`;
@@ -111,8 +111,8 @@ function sendErrorCard(res, message) {
  * 🏆 400×300 카드
  * 🏆 상단(티어/닉네임) 폰트=26
  * 🏆 원형 게이지(왼쪽) => 지름=120 => r=60 => 왼쪽이 x=20 => cx=80
- * 🏆 게이지 중앙 텍스트: dominant-baseline="middle"
- * 🏆 오른쪽 4줄 텍스트(x=220, y=110, 폰트=22)
+ * 🏆 게이지 중앙 텍스트: dominant-baseline="middle", 폰트=36
+ * 🏆 오른쪽 4줄 텍스트(x=220, y=110, 폰트=22, font-weight=bold, 첫 글자 대문자)
  * 🏆 하단 바 y=260
  * 🏆 SMIL 1초 + 텍스트 페이드 인
  */
@@ -131,7 +131,7 @@ function renderLeftGaugeCard({
   const width = 400;
   const height = 300;
 
-  // 색상
+  // 색상 (유지)
   const bgColor = "#101010";
   const textColor = "#ffffff";
   const subTextColor = "#C9D1D9";
@@ -199,7 +199,7 @@ function renderLeftGaugeCard({
     width="${width}" height="${height}"
     rx="8"
     fill="${bgColor}"
-    stroke="#404040" stroke-width="2"
+    stroke="${trackColor}" stroke-width="2"
   />
 
   <!-- 상단 텍스트 (티어 / 닉네임) -->
@@ -234,14 +234,14 @@ function renderLeftGaugeCard({
     ${circleAnim}
   </circle>
 
-  <!-- 중앙 rating 숫자 -->
+  <!-- 중앙 rating 숫자 (더 키움: 36) -->
   <text
     x="${cx}"
     y="${cy}"
     text-anchor="middle"
     dominant-baseline="middle"
     fill="${textColor}"
-    font-size="30"
+    font-size="36"
     font-weight="bold"
     opacity="0"
   >
@@ -249,13 +249,13 @@ function renderLeftGaugeCard({
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 오른쪽 4줄 텍스트 (폰트=22) -->
+  <!-- 오른쪽 4줄 텍스트 (폰트=22, font-weight=bold, 첫 글자 대문자) -->
   <g transform="translate(220, 110)" opacity="0">
     ${fadeIn("0.2s")}
-    <text x="0"  y="0"   fill="${textColor}" font-size="22">rate: ${rating}</text>
-    <text x="0"  y="30"  fill="${textColor}" font-size="22">solved: ${solved}</text>
-    <text x="0"  y="60"  fill="${textColor}" font-size="22">class: ${classNum}</text>
-    <text x="0"  y="90"  fill="${textColor}" font-size="22">rank: #${rank}</text>
+    <text x="0"  y="0"   fill="${textColor}" font-size="22" font-weight="bold">Rate: ${rating}</text>
+    <text x="0"  y="30"  fill="${textColor}" font-size="22" font-weight="bold">Solved: ${solved}</text>
+    <text x="0"  y="60"  fill="${textColor}" font-size="22" font-weight="bold">Class: ${classNum}</text>
+    <text x="0"  y="90"  fill="${textColor}" font-size="22" font-weight="bold">Rank: #${rank}</text>
   </g>
 
   <!-- 하단 바 -->
