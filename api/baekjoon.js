@@ -42,7 +42,9 @@ module.exports = async (req, res) => {
 
   try {
     // 1. solved.ac API 호출
-    const { data } = await axios.get(`https://solved.ac/api/v3/user/show?handle=${username}`);
+    const { data } = await axios.get(
+      `https://solved.ac/api/v3/user/show?handle=${username}`
+    );
 
     // 2. 주요 정보
     const tierNum = data.tier || 0;
@@ -107,7 +109,8 @@ function sendErrorCard(res, message) {
 
 /**
  * 🏆 LeetCode 다크 테마 + border + rx=10
- * 🏆 중간 정보를 2×2 그리드로 배치 (rate/solved | class/rank)
+ * 🏆 폰트 크기 상단=20, 가운데=16, 게이지=22, 하단=14
+ * 🏆 2×2 그리드 (rate/solved | class/rank), 오른쪽 열 안 잘리도록 x좌표 조정
  * 🏆 하단 바 y=160
  * 🏆 SMIL 1초 애니 + 텍스트 페이드 인
  */
@@ -196,7 +199,9 @@ function renderCleanLayout({
     ${tierGroup} ${tierSub}
     ${fadeIn("0s")}
   </text>
-  <text x="${width - 20}" y="35" text-anchor="end" fill="${textColor}" font-size="20" font-weight="bold" opacity="0">
+  <text x="${
+    width - 20
+  }" y="35" text-anchor="end" fill="${textColor}" font-size="20" font-weight="bold" opacity="0">
     ${handle}
     ${fadeIn("0s")}
   </text>
@@ -224,21 +229,23 @@ function renderCleanLayout({
   </circle>
 
   <!-- 중앙 rating 숫자 -->
-  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="24" font-weight="bold" opacity="0">
+  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="22" font-weight="bold" opacity="0">
     ${rating}
     ${fadeIn("0.1s")}
   </text>
 
   <!-- 가운데 info (2×2 그리드) -->
-  <!-- 첫 열: rate, solved -->
-  <!-- 둘째 열: class, rank -->
-  <g transform="translate(150, 60)" opacity="0">
+  <!-- 그룹 위치 x=140, 첫 열 x=0, 두 번째 열 x=110 -->
+  <!-- 폰트 크기 16, 행 간격 30 -->
+  <g transform="translate(140, 70)" opacity="0">
     ${fadeIn("0.2s")}
-    <text x="0" y="0" fill="${textColor}" font-size="20">rate: ${rating}</text>
-    <text x="0" y="35" fill="${textColor}" font-size="20">solved: ${solved}</text>
+    <!-- 첫 열 -->
+    <text x="0"   y="0"  fill="${textColor}" font-size="16">rate: ${rating}</text>
+    <text x="0"   y="30" fill="${textColor}" font-size="16">solved: ${solved}</text>
 
-    <text x="220" y="0" fill="${textColor}" font-size="20">class: ${classNum}</text>
-    <text x="220" y="35" fill="${textColor}" font-size="20">rank: #${rank}</text>
+    <!-- 두 번째 열 -->
+    <text x="110" y="0"  fill="${textColor}" font-size="16">class: ${classNum}</text>
+    <text x="110" y="30" fill="${textColor}" font-size="16">rank: #${rank}</text>
   </g>
 
   <!-- 하단 바 (트랙) -->
@@ -262,14 +269,18 @@ function renderCleanLayout({
     ${barAnim}
   </rect>
 
-  <!-- 바 위쪽 오른쪽: 퍼센트 -->
-  <text x="${width - 20}" y="${barY - 3}" text-anchor="end" fill="${subTextColor}" font-size="18" opacity="0">
+  <!-- 바 위쪽 오른쪽: 퍼센트 (폰트 14) -->
+  <text x="${width - 20}" y="${
+    barY - 3
+  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
     ${percentText}
     ${fadeIn("0.4s")}
   </text>
 
-  <!-- 바 아래 오른쪽: 분수 (fraction) -->
-  <text x="${width - 20}" y="${barY + barHeight + 20}" text-anchor="end" fill="${subTextColor}" font-size="18" opacity="0">
+  <!-- 바 아래 오른쪽: 분수 (폰트 14) -->
+  <text x="${width - 20}" y="${
+    barY + barHeight + 20
+  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
     ${fractionText}
     ${fadeIn("0.4s")}
   </text>
