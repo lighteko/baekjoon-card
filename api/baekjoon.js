@@ -41,7 +41,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // solved.ac API로 사용자 정보
+    // solved.ac API로 사용자 정보 가져오기
     const { data } = await axios.get(
       `https://solved.ac/api/v3/user/show?handle=${username}`
     );
@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
     const ratingCapped = Math.min(rating, 4000);
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
-    // 최종 SVG 생성
+    // 최종 SVG
     const svg = renderLeftGaugeCard({
       tierGroup,
       tierSub,
@@ -115,7 +115,7 @@ function sendErrorCard(res, message) {
  * 🏆 게이지 중앙 레이팅=폰트=30
  * 🏆 오른쪽 4줄 텍스트(x=220, y=110, 폰트=22)
  * 🏆 하단 바 y=260
- * 🏆 SMIL 1초 + 페이드 인
+ * 🏆 SMIL 1초 + 텍스트 페이드 인
  */
 function renderLeftGaugeCard({
   tierGroup,
@@ -140,7 +140,6 @@ function renderLeftGaugeCard({
   const accentColor = "#f79a09";
 
   // 원형 게이지
-  // bounding box left=20 => cx-r=20 => cx=70 if r=50
   const radius = 50;
   const cx = 70;
   const cy = 150;
@@ -214,7 +213,7 @@ function renderLeftGaugeCard({
     ${fadeIn("0s")}
   </text>
 
-  <!-- 원형 게이지 배경 -->
+  <!-- 원형 게이지 배경 (왼쪽) -->
   <circle
     cx="${cx}" cy="${cy}" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
@@ -294,7 +293,7 @@ function renderLeftGaugeCard({
   <!-- 바 아래 오른쪽: 분수 -->
   <text
     x="${width - 20}"
-    y="${barY + ${barHeight} + 20}"
+    y="${barY + barHeight + 20}"
     text-anchor="end"
     fill="${subTextColor}"
     font-size="16"
