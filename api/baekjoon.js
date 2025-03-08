@@ -51,9 +51,7 @@ module.exports = async (req, res) => {
     const solved = data.solvedCount || 0;
     const classNum = data.class || 0;
     const handle = data.handle || username;
-    // 새로 추가할 필드
     const rank = data.rank || 0;
-    const exp = data.exp || 0;
 
     // 티어 범위 (하단 바)
     const [minRating, maxRating] = getTierRange(tierNum);
@@ -71,7 +69,7 @@ module.exports = async (req, res) => {
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
     // 3. SVG 생성
-    const svg = renderBigTextWithExtraInfo({
+    const svg = renderCleanLayout({
       tierGroup,
       tierSub,
       rating,
@@ -82,7 +80,6 @@ module.exports = async (req, res) => {
       percentText,
       circlePercent,
       rank,
-      exp,
     });
 
     res.setHeader("Content-Type", "image/svg+xml");
@@ -110,12 +107,11 @@ function sendErrorCard(res, message) {
 
 /**
  * 🏆 LeetCode 다크 테마 + border + rx=10
- * 🏆 텍스트 크게
- * 🏆 중간에 (rate/solved/class/rank/exp) 5줄
- * 🏆 하단 바 y=160 (원래 위치)
- * 🏆 SMIL 1초 애니 + 페이드 인
+ * 🏆 중간 정보를 2×2 그리드로 배치 (rate/solved | class/rank)
+ * 🏆 하단 바 y=160
+ * 🏆 SMIL 1초 애니 + 텍스트 페이드 인
  */
-function renderBigTextWithExtraInfo({
+function renderCleanLayout({
   tierGroup,
   tierSub,
   rating,
@@ -126,7 +122,6 @@ function renderBigTextWithExtraInfo({
   percentText,
   circlePercent,
   rank,
-  exp,
 }) {
   const width = 450;
   const height = 200;
@@ -143,7 +138,7 @@ function renderBigTextWithExtraInfo({
   const circleCircum = 2 * Math.PI * radius;
   const dashVal = (circlePercent / 100) * circleCircum;
 
-  // 하단 바 (원래대로 y=160)
+  // 하단 바
   const barX = 20;
   const barY = 160;
   const barWidth = width - 40;
@@ -234,14 +229,16 @@ function renderBigTextWithExtraInfo({
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 가운데 info (5줄) -->
-  <g transform="translate(150, 40)" opacity="0">
+  <!-- 가운데 info (2×2 그리드) -->
+  <!-- 첫 열: rate, solved -->
+  <!-- 둘째 열: class, rank -->
+  <g transform="translate(150, 60)" opacity="0">
     ${fadeIn("0.2s")}
     <text x="0" y="0" fill="${textColor}" font-size="20">rate: ${rating}</text>
-    <text x="0" y="25" fill="${textColor}" font-size="20">solved: ${solved}</text>
-    <text x="0" y="50" fill="${textColor}" font-size="20">class: ${classNum}</text>
-    <text x="0" y="75" fill="${textColor}" font-size="20">rank: #${rank}</text>
-    <text x="0" y="100" fill="${textColor}" font-size="20">exp: ${exp}</text>
+    <text x="0" y="35" fill="${textColor}" font-size="20">solved: ${solved}</text>
+
+    <text x="220" y="0" fill="${textColor}" font-size="20">class: ${classNum}</text>
+    <text x="220" y="35" fill="${textColor}" font-size="20">rank: #${rank}</text>
   </g>
 
   <!-- 하단 바 (트랙) -->
