@@ -130,7 +130,7 @@ function renderCleanLayout({
   const height = 200;
 
   // 색상
-  const bgColor = "#0d1117";
+  const bgColor = "#101010";
   const textColor = "#ffffff";
   const subTextColor = "#C9D1D9";
   const trackColor = "#30363d";
