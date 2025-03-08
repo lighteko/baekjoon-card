@@ -189,7 +189,7 @@ function renderCleanLayout({
   <!-- 배경 + 테두리 -->
   <rect
     width="${width}" height="${height}"
-    rx="5"
+    rx="8"
     fill="${bgColor}"
     stroke="#30363d" stroke-width="2"
   />
