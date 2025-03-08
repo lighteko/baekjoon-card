@@ -190,9 +190,8 @@ function renderSingleColumn({
   <!-- 배경 + 테두리 -->
   <rect
     width="${width}" height="${height}"
-    rx="10"
+    rx="8"
     fill="${bgColor}"
-    stroke="#30363d" stroke-width="2"
   />
 
   <!-- 상단: 티어 + handle -->
