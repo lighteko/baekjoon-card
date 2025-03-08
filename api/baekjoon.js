@@ -41,7 +41,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // solved.ac API로 사용자 정보 가져오기
+    // solved.ac API
     const { data } = await axios.get(
       `https://solved.ac/api/v3/user/show?handle=${username}`
     );
@@ -110,9 +110,8 @@ function sendErrorCard(res, message) {
 /**
  * 🏆 400×300 카드
  * 🏆 상단(티어/닉네임) 폰트=26
- * 🏆 원형 게이지(왼쪽) bounding box 왼쪽=20 => r=50, cx=70
- * 🏆 게이지 위치(cx=70, cy=150, r=50)
- * 🏆 게이지 중앙 레이팅=폰트=30
+ * 🏆 왼쪽 큰 원형 게이지(r=60), x=70
+ * 🏆 게이지 중앙 텍스트 dominant-baseline="middle"
  * 🏆 오른쪽 4줄 텍스트(x=220, y=110, 폰트=22)
  * 🏆 하단 바 y=260
  * 🏆 SMIL 1초 + 텍스트 페이드 인
@@ -140,7 +139,8 @@ function renderLeftGaugeCard({
   const accentColor = "#f79a09";
 
   // 원형 게이지
-  const radius = 50;
+  // left=20 => center x=70, radius=60 => leftmost=70-60=10 (좀 더 여유)
+  const radius = 60;
   const cx = 70;
   const cy = 150;
   const circleCircum = 2 * Math.PI * radius;
@@ -235,11 +235,12 @@ function renderLeftGaugeCard({
     ${circleAnim}
   </circle>
 
-  <!-- 중앙 rating 숫자 -->
+  <!-- 중앙 rating 숫자 (dominant-baseline으로 정확히 중앙 정렬) -->
   <text
     x="${cx}"
-    y="${cy + 5}"
+    y="${cy}"
     text-anchor="middle"
+    dominant-baseline="middle"
     fill="${textColor}"
     font-size="30"
     font-weight="bold"
