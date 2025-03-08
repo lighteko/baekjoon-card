@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
     // 3. SVG 생성
-    const svg = renderWithTextFade({
+    const svg = renderBigTextAnimated({
       tierGroup,
       tierSub,
       rating,
@@ -106,12 +106,11 @@ function sendErrorCard(res, message) {
 }
 
 /**
- * ✅ LeetCode 다크 테마 + border radius & outline
- * ✅ 텍스트도 SMIL 페이드 인 (opacity 0→1, dur=1s)
- * ✅ 원형 게이지 & 하단 바 애니메이션 (1s)
- * ✅ 로딩 시 한 번만 재생 (fill="freeze")
+ * 🏆 LeetCode 다크 테마 + border + rx=10
+ * 🏆 텍스트 크게 키움
+ * 🏆 텍스트 페이드 인 + 원형 게이지 & 바 1초 애니
  */
-function renderWithTextFade({
+function renderBigTextAnimated({
   tierGroup,
   tierSub,
   rating,
@@ -139,7 +138,8 @@ function renderWithTextFade({
 
   // 하단 바
   const barX = 20;
-  const barY = 160;
+  // y를 170으로 내려서 중앙에 여유
+  const barY = 170;
   const barWidth = width - 40;
   const barHeight = 8;
   const barFillWidth = Math.round((circlePercent / 100) * barWidth);
@@ -166,7 +166,7 @@ function renderWithTextFade({
     />
   `;
 
-  // 텍스트 페이드 인 (opacity=0 -> 1, 1초)
+  // 텍스트 페이드 인 (opacity=0 -> 1, dur=1s)
   function fadeIn(begin = "0s") {
     return `
       <animate
@@ -187,21 +187,22 @@ function renderWithTextFade({
     width="${width}" height="${height}"
     rx="10"
     fill="${bgColor}"
+    stroke="#30363d" stroke-width="2"
   />
 
-  <!-- 상단: 티어 + handle (페이드 인) -->
-  <text x="20" y="30" fill="${textColor}" font-size="16" font-weight="bold" opacity="0">
+  <!-- 상단: 티어 + handle -->
+  <text x="20" y="35" fill="${textColor}" font-size="20" font-weight="bold" opacity="0">
     ${tierGroup} ${tierSub}
     ${fadeIn("0s")}
   </text>
   <text x="${
     width - 20
-  }" y="30" text-anchor="end" fill="${textColor}" font-size="16" font-weight="bold" opacity="0">
+  }" y="35" text-anchor="end" fill="${textColor}" font-size="20" font-weight="bold" opacity="0">
     ${handle}
     ${fadeIn("0s")}
   </text>
 
-  <!-- 원형 게이지 배경 (페이드 인) -->
+  <!-- 원형 게이지 배경 -->
   <circle
     cx="80" cy="100" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
@@ -210,7 +211,7 @@ function renderWithTextFade({
     ${fadeIn("0s")}
   </circle>
 
-  <!-- 원형 게이지 진행 (페이드 인 + dasharray 애니메이션) -->
+  <!-- 원형 게이지 진행 -->
   <circle
     cx="80" cy="100" r="${radius}"
     stroke="${accentColor}" stroke-width="8" fill="none"
@@ -223,21 +224,21 @@ function renderWithTextFade({
     ${circleAnim}
   </circle>
 
-  <!-- 중앙 rating 숫자 (페이드 인) -->
-  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="18" font-weight="bold" opacity="0">
+  <!-- 중앙 rating 숫자 -->
+  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="24" font-weight="bold" opacity="0">
     ${rating}
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 가운데 info (rate/solved/class) (페이드 인) -->
+  <!-- 가운데 info (rate/solved/class) -->
   <g transform="translate(150, 70)" opacity="0">
     ${fadeIn("0.2s")}
-    <text x="0" y="0" fill="${textColor}" font-size="16">rate: ${rating}</text>
-    <text x="0" y="25" fill="${textColor}" font-size="16">solved: ${solved}</text>
-    <text x="0" y="50" fill="${textColor}" font-size="16">class: ${classNum}</text>
+    <text x="0" y="0" fill="${textColor}" font-size="20">rate: ${rating}</text>
+    <text x="0" y="35" fill="${textColor}" font-size="20">solved: ${solved}</text>
+    <text x="0" y="70" fill="${textColor}" font-size="20">class: ${classNum}</text>
   </g>
 
-  <!-- 하단 바 (트랙, 페이드 인) -->
+  <!-- 하단 바 (트랙) -->
   <rect
     x="${barX}" y="${barY}"
     width="${barWidth}" height="${barHeight}"
@@ -258,18 +259,18 @@ function renderWithTextFade({
     ${barAnim}
   </rect>
 
-  <!-- 바 위쪽 오른쪽: 퍼센트 (페이드 인) -->
+  <!-- 바 위쪽 오른쪽: 퍼센트 -->
   <text x="${width - 20}" y="${
     barY - 3
-  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
+  }" text-anchor="end" fill="${subTextColor}" font-size="18" opacity="0">
     ${percentText}
     ${fadeIn("0.4s")}
   </text>
 
-  <!-- 바 아래 오른쪽: 분수 (fraction) (페이드 인) -->
+  <!-- 바 아래 오른쪽: 분수 (fraction) -->
   <text x="${width - 20}" y="${
-    barY + barHeight + 15
-  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
+    barY + barHeight + 20
+  }" text-anchor="end" fill="${subTextColor}" font-size="18" opacity="0">
     ${fractionText}
     ${fadeIn("0.4s")}
   </text>
