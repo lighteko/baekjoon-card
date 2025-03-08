@@ -135,7 +135,7 @@ function renderLeftGaugeCard({
   const bgColor = "#101010";
   const textColor = "#ffffff";
   const subTextColor = "#C9D1D9";
-  const trackColor = "#30363d";
+  const trackColor = "#404040";
   const accentColor = "#f79a09";
 
   // 게이지: 왼쪽 x=20 => center x=80 when r=60
