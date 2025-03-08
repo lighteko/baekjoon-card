@@ -126,7 +126,7 @@ function renderCleanLayout({
   circlePercent,
   rank,
 }) {
-  const width = 450;
+  const width = 300;
   const height = 200;
 
   // 색상
