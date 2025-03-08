@@ -1,8 +1,6 @@
 const axios = require("axios");
 
-/**
- * 티어 번호(1~30)를 "Diamond 5" 식 문자열로 변환
- */
+/** 티어 번호(1~30)를 "Bronze IV" 형태로 변환 */
 function getTierNameAndNumber(tierNum) {
   if (tierNum < 1 || tierNum > 30) {
     return { tierGroup: "Unranked", tierSub: "" };
@@ -10,27 +8,15 @@ function getTierNameAndNumber(tierNum) {
   const groups = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"];
   const subTiers = ["V", "IV", "III", "II", "I"];
 
-  // 예) tier=1 => Bronze V, tier=10 => Silver I
   const groupIndex = Math.floor((tierNum - 1) / 5);
   const subIndex = (tierNum - 1) % 5;
-
   return {
     tierGroup: groups[groupIndex],
     tierSub: subTiers[subIndex],
   };
 }
 
-/**
- * 티어 번호별 대략적인 레이팅 범위(예시)
- *  - 실제 solved.ac와 1:1 일치하진 않지만, 예시로 사용
- *    Bronze (1~5)     : [800, 1299]
- *    Silver (6~10)    : [1300, 1599]
- *    Gold (11~15)     : [1600, 1899]
- *    Platinum (16~20) : [1900, 2199]
- *    Diamond (21~25)  : [2200, 2699]
- *    Ruby (26~30)     : [2700, 4000]
- *    그 외 (Unranked) : [0, 4000]
- */
+/** 티어 번호별 대략적 레이팅 범위 (예시) */
 function getTierRange(tierNum) {
   if (tierNum >= 1 && tierNum <= 5) {
     return [800, 1299];
@@ -45,8 +31,7 @@ function getTierRange(tierNum) {
   } else if (tierNum <= 30) {
     return [2700, 4000];
   }
-  // Unranked
-  return [0, 4000];
+  return [0, 4000]; // Unranked
 }
 
 module.exports = async (req, res) => {
@@ -56,21 +41,21 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // 1. solved.ac API 호출: Baekjoon 유저 정보
+    // 1. solved.ac API 호출
     const { data } = await axios.get(
       `https://solved.ac/api/v3/user/show?handle=${username}`
     );
 
-    // 2. 주요 정보 파싱
+    // 2. 주요 정보
     const tierNum = data.tier || 0;
     const { tierGroup, tierSub } = getTierNameAndNumber(tierNum);
     const rating = data.rating || 0;
     const solved = data.solvedCount || 0;
     const classNum = data.class || 0;
     const handle = data.handle || username;
-    const [minRating, maxRating] = getTierRange(tierNum);
 
-    // 티어 범위를 벗어나면 범위 안으로 보정
+    // 티어별 레이팅 범위
+    const [minRating, maxRating] = getTierRange(tierNum);
     let clamped = Math.max(rating, minRating);
     clamped = Math.min(clamped, maxRating);
 
@@ -78,10 +63,11 @@ module.exports = async (req, res) => {
     const ratio = (clamped - minRating) / (maxRating - minRating);
     const progressPercent = Math.round(ratio * 100);
 
-    // 예: "2260 / 2300 => 60%"
-    const progressText = `${rating} / ${maxRating} => ${progressPercent}%`;
+    // 분수 텍스트 / 퍼센트 텍스트
+    const fractionText = `${rating} / ${maxRating}`;
+    const percentText = `${progressPercent}%`;
 
-    // 원형 게이지 % (rating / 4000) 가정
+    // 원형 게이지 (rating / 4000)
     const ratingCap = Math.min(rating, 4000);
     const circlePercent = Math.round((ratingCap / 4000) * 100);
 
@@ -93,13 +79,12 @@ module.exports = async (req, res) => {
       solved,
       classNum,
       handle,
-      minRating,
-      maxRating,
-      progressText,
+      fractionText,
+      percentText,
       circlePercent,
     });
 
-    // 4. 응답
+    // 응답
     res.setHeader("Content-Type", "image/svg+xml");
     res.send(svg);
   } catch (err) {
@@ -110,17 +95,20 @@ module.exports = async (req, res) => {
 
 function sendErrorCard(res, message) {
   const errorSvg = `
-  <svg width="450" height="120" xmlns="http://www.w3.org/2000/svg">
-    <rect width="450" height="120" rx="10" fill="#0d1117"/>
-    <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold">${message}</text>
-  </svg>`;
+    <svg width="450" height="120" xmlns="http://www.w3.org/2000/svg">
+      <rect width="450" height="120" rx="10" fill="#0d1117"/>
+      <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold">${message}</text>
+    </svg>`;
   res.setHeader("Content-Type", "image/svg+xml");
   res.send(errorSvg);
 }
 
 /**
- * LeetCode 다크 테마(배경= #0d1117) + 원형 그래프 유지
- * 내용(티어명, 숫자, rate/solved/class, 진행 바) => 첨부 이미지 참고
+ * LeetCode 다크 테마(배경=#0d1117) + 원형 그래프
+ * 하단 바:
+ *   - 퍼센트(%): 바 위쪽 오른쪽
+ *   - 분수( fraction ): 바 아래 오른쪽
+ * rate/solved/class 폰트 크기: 16
  */
 function renderLeetTierCard({
   tierGroup,
@@ -129,25 +117,23 @@ function renderLeetTierCard({
   solved,
   classNum,
   handle,
-  minRating,
-  maxRating,
-  progressText,
+  fractionText,
+  percentText,
   circlePercent,
 }) {
   const width = 450;
   const height = 200;
 
   // 색상
-  const bgColor = "#0d1117"; // LeetCode 다크 테마
+  const bgColor = "#0d1117";
   const textColor = "#ffffff";
   const subTextColor = "#C9D1D9";
   const trackColor = "#30363d";
-  const accentColor = "#f79a09"; // 원형 그래프/바 색상
+  const accentColor = "#f79a09";
 
-  // 원형 그래프(왼쪽) 설정
+  // 원형 그래프 설정
   const radius = 40;
   const circleCircum = 2 * Math.PI * radius;
-  // circlePercent% => stroke-dasharray
   const dashVal = (circlePercent / 100) * circleCircum;
 
   // 하단 진행 바
@@ -156,7 +142,7 @@ function renderLeetTierCard({
   const barWidth = width - 40;
   const barHeight = 8;
 
-  // SMIL 애니메이션 (원형 그래프: 0->dashVal)
+  // SMIL 애니메이션 (원형 그래프: 0 -> dashVal)
   const circleAnim = `
     <animate
       attributeName="stroke-dasharray"
@@ -167,11 +153,7 @@ function renderLeetTierCard({
     />
   `;
 
-  // SMIL 애니메이션 (하단 바: width 0-> barWidth*ratio)
-  // ratio = circlePercent / 100?
-  // 하지만 여기서는 tier 범위별 ratio가 다르므로, 그냥 1초 동안 풀로 채우거나
-  // 혹은 원하는 만큼만 채우도록 수정 가능
-  // 여기서는 풀로 채우고, "progressText"로 비율 표기
+  // SMIL 애니메이션 (하단 바: width 0 -> barWidth * circlePercent/100)
   const barAnim = `
     <animate
       attributeName="width"
@@ -187,7 +169,7 @@ function renderLeetTierCard({
   <!-- 배경 -->
   <rect width="${width}" height="${height}" rx="10" fill="${bgColor}" />
 
-  <!-- 상단: 티어명 & 숫자 (왼쪽), 유저 handle (오른쪽) -->
+  <!-- 상단: 티어 + handle -->
   <text x="20" y="30" fill="${textColor}" font-size="16" font-weight="bold">
     ${tierGroup} ${tierSub}
   </text>
@@ -197,7 +179,7 @@ function renderLeetTierCard({
     ${handle}
   </text>
 
-  <!-- 원형 그래프 (왼쪽) - ratingPercent -->
+  <!-- 원형 그래프 (왼쪽) -->
   <circle
     cx="80" cy="100" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
@@ -216,27 +198,34 @@ function renderLeetTierCard({
     ${rating}
   </text>
 
-  <!-- 가운데 정보: rate, solved, class -->
+  <!-- 가운데 info: rate / solved / class (폰트 16으로 확대) -->
   <g transform="translate(150, 70)">
-    <text x="0" y="0" fill="${textColor}" font-size="14">rate: ${rating}</text>
-    <text x="0" y="20" fill="${textColor}" font-size="14">solved: ${solved}</text>
-    <text x="0" y="40" fill="${textColor}" font-size="14">class: ${classNum}</text>
+    <text x="0" y="0" fill="${textColor}" font-size="16">rate: ${rating}</text>
+    <text x="0" y="25" fill="${textColor}" font-size="16">solved: ${solved}</text>
+    <text x="0" y="50" fill="${textColor}" font-size="16">class: ${classNum}</text>
   </g>
 
-  <!-- 하단 진행 바 -->
+  <!-- 하단 진행 바 (트랙) -->
   <rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}"
         fill="${trackColor}" rx="4" />
+  <!-- 하단 진행 바 (채워지는 부분) -->
   <rect x="${barX}" y="${barY}" width="0" height="${barHeight}"
         fill="${accentColor}" rx="4">
     ${barAnim}
   </rect>
 
-  <!-- 진행 바 텍스트 (오른쪽 정렬) -->
+  <!-- 바 위쪽 오른쪽: 퍼센트 -->
   <text x="${width - 20}" y="${
-    barY - 2
-  }" text-anchor="end" fill="${subTextColor}"
-        font-size="12" alignment-baseline="baseline">
-    ${progressText}
+    barY - 3
+  }" text-anchor="end" fill="${subTextColor}" font-size="14">
+    ${percentText}
+  </text>
+
+  <!-- 바 아래 오른쪽: 분수 (fraction) -->
+  <text x="${width - 20}" y="${
+    barY + barHeight + 15
+  }" text-anchor="end" fill="${subTextColor}" font-size="14">
+    ${fractionText}
   </text>
 </svg>
 `;
