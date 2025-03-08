@@ -1,7 +1,7 @@
 {
-  "name": "baekjoon-stats-card",
+  "name": "baekjoon-leetcard",
   "version": "1.0.0",
-  "description": "Dynamic Baekjoon stats card API in the style of github-readme-stats",
+  "description": "Baekjoon stats card styled like a LeetCard",
   "main": "api/baekjoon.js",
   "scripts": {
     "start": "node api/baekjoon.js",
@@ -15,9 +15,9 @@
   },
   "keywords": [
     "baekjoon",
-    "stats",
-    "github-readme-stats",
+    "leetcard",
     "vercel",
+    "api",
     "svg"
   ],
   "author": "lighteko",
