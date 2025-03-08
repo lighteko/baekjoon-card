@@ -1,15 +1,52 @@
 const axios = require("axios");
 
-/** solved.ac 티어 숫자를 "Bronze V" 식으로 변환하는 함수 */
-function getTierName(tier) {
-  if (tier < 1 || tier > 30) return "Unranked";
-
+/**
+ * 티어 번호(1~30)를 "Diamond 5" 식 문자열로 변환
+ */
+function getTierNameAndNumber(tierNum) {
+  if (tierNum < 1 || tierNum > 30) {
+    return { tierGroup: "Unranked", tierSub: "" };
+  }
   const groups = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"];
   const subTiers = ["V", "IV", "III", "II", "I"];
-  // 예: tier=1 => Bronze V, tier=10 => Silver I
-  const groupIndex = Math.floor((tier - 1) / 5);
-  const subIndex = (tier - 1) % 5;
-  return groups[groupIndex] + " " + subTiers[subIndex];
+
+  // 예) tier=1 => Bronze V, tier=10 => Silver I
+  const groupIndex = Math.floor((tierNum - 1) / 5);
+  const subIndex = (tierNum - 1) % 5;
+
+  return {
+    tierGroup: groups[groupIndex],
+    tierSub: subTiers[subIndex],
+  };
+}
+
+/**
+ * 티어 번호별 대략적인 레이팅 범위(예시)
+ *  - 실제 solved.ac와 1:1 일치하진 않지만, 예시로 사용
+ *    Bronze (1~5)     : [800, 1299]
+ *    Silver (6~10)    : [1300, 1599]
+ *    Gold (11~15)     : [1600, 1899]
+ *    Platinum (16~20) : [1900, 2199]
+ *    Diamond (21~25)  : [2200, 2699]
+ *    Ruby (26~30)     : [2700, 4000]
+ *    그 외 (Unranked) : [0, 4000]
+ */
+function getTierRange(tierNum) {
+  if (tierNum >= 1 && tierNum <= 5) {
+    return [800, 1299];
+  } else if (tierNum <= 10) {
+    return [1300, 1599];
+  } else if (tierNum <= 15) {
+    return [1600, 1899];
+  } else if (tierNum <= 20) {
+    return [1900, 2199];
+  } else if (tierNum <= 25) {
+    return [2200, 2699];
+  } else if (tierNum <= 30) {
+    return [2700, 4000];
+  }
+  // Unranked
+  return [0, 4000];
 }
 
 module.exports = async (req, res) => {
@@ -19,35 +56,50 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // solved.ac API로 Baekjoon 유저 정보 가져오기
+    // 1. solved.ac API 호출: Baekjoon 유저 정보
     const { data } = await axios.get(
       `https://solved.ac/api/v3/user/show?handle=${username}`
     );
 
-    // 주요 정보
-    const solvedCount = data.solvedCount || 0; // 푼 문제 수
-    const rank = data.rank || 999999; // solved.ac 랭킹
-    const tierNum = data.tier || 0; // 티어(숫자)
-    const rating = data.rating || 0; // 레이팅 (대략 800~4000)
-    const exp = data.exp || 0; // 경험치(누적)
-    const tierName = getTierName(tierNum);
+    // 2. 주요 정보 파싱
+    const tierNum = data.tier || 0;
+    const { tierGroup, tierSub } = getTierNameAndNumber(tierNum);
+    const rating = data.rating || 0;
+    const solved = data.solvedCount || 0;
+    const classNum = data.class || 0;
+    const handle = data.handle || username;
+    const [minRating, maxRating] = getTierRange(tierNum);
 
-    // rating 최대값을 4000으로 가정 (넘으면 4000으로 처리)
-    const ratingCapped = Math.min(rating, 4000);
-    // 게이지 진행도 (0~100)
-    const ratingPercent = Math.round((ratingCapped / 4000) * 100);
+    // 티어 범위를 벗어나면 범위 안으로 보정
+    let clamped = Math.max(rating, minRating);
+    clamped = Math.min(clamped, maxRating);
 
-    // LeetCard 스타일 + 애니메이션 적용한 SVG 생성
-    const svg = renderLeetStyleSVG({
-      username,
-      rank,
-      solvedCount,
+    // 진행도 계산
+    const ratio = (clamped - minRating) / (maxRating - minRating);
+    const progressPercent = Math.round(ratio * 100);
+
+    // 예: "2260 / 2300 => 60%"
+    const progressText = `${rating} / ${maxRating} => ${progressPercent}%`;
+
+    // 원형 게이지 % (rating / 4000) 가정
+    const ratingCap = Math.min(rating, 4000);
+    const circlePercent = Math.round((ratingCap / 4000) * 100);
+
+    // 3. SVG 생성
+    const svg = renderLeetTierCard({
+      tierGroup,
+      tierSub,
       rating,
-      ratingPercent,
-      tierName,
-      exp,
+      solved,
+      classNum,
+      handle,
+      minRating,
+      maxRating,
+      progressText,
+      circlePercent,
     });
 
+    // 4. 응답
     res.setHeader("Content-Type", "image/svg+xml");
     res.send(svg);
   } catch (err) {
@@ -58,112 +110,134 @@ module.exports = async (req, res) => {
 
 function sendErrorCard(res, message) {
   const errorSvg = `
-    <svg width="450" height="120" xmlns="http://www.w3.org/2000/svg">
-      <rect width="450" height="120" rx="10" fill="#1F1F1F"/>
-      <text x="20" y="65" fill="#FFFFFF" font-size="16" font-weight="bold">${message}</text>
-    </svg>
-  `;
+  <svg width="450" height="120" xmlns="http://www.w3.org/2000/svg">
+    <rect width="450" height="120" rx="10" fill="#0d1117"/>
+    <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold">${message}</text>
+  </svg>`;
   res.setHeader("Content-Type", "image/svg+xml");
   res.send(errorSvg);
 }
 
 /**
- * LeetCard 비슷한 스타일의 SVG 생성
- * - 원형 게이지 크게 (r=40)
- * - 게이지 채워지는 애니메이션 (SMIL)
- * - 오른쪽에 Rank, Solved, Tier, Exp 표시
+ * LeetCode 다크 테마(배경= #0d1117) + 원형 그래프 유지
+ * 내용(티어명, 숫자, rate/solved/class, 진행 바) => 첨부 이미지 참고
  */
-function renderLeetStyleSVG({
-  username,
-  rank,
-  solvedCount,
+function renderLeetTierCard({
+  tierGroup,
+  tierSub,
   rating,
-  ratingPercent,
-  tierName,
-  exp,
+  solved,
+  classNum,
+  handle,
+  minRating,
+  maxRating,
+  progressText,
+  circlePercent,
 }) {
-  // 원형 게이지 설정
+  const width = 450;
+  const height = 200;
+
+  // 색상
+  const bgColor = "#0d1117"; // LeetCode 다크 테마
+  const textColor = "#ffffff";
+  const subTextColor = "#C9D1D9";
+  const trackColor = "#30363d";
+  const accentColor = "#f79a09"; // 원형 그래프/바 색상
+
+  // 원형 그래프(왼쪽) 설정
   const radius = 40;
   const circleCircum = 2 * Math.PI * radius;
-  // 최종 stroke-dasharray
-  const strokeVal = (ratingPercent / 100) * circleCircum;
+  // circlePercent% => stroke-dasharray
+  const dashVal = (circlePercent / 100) * circleCircum;
 
-  // 색상/스타일
-  const bgColor = "#0d1117";
-  const textColor = "#FFFFFF";
-  const subTextColor = "#C9D1D9";
-  const circleTrackColor = "#30363d";
-  const circleProgressColor = "#f79a09";
+  // 하단 진행 바
+  const barX = 20;
+  const barY = 160;
+  const barWidth = width - 40;
+  const barHeight = 8;
 
-  // SMIL 애니메이션:
-  // 1) stroke-dasharray를 0 -> 최종값으로 1초간 변경
-  // 2) text(가운데 rating)도 0 -> rating 으로 변환하는 건 SMIL로 복잡해서 생략 or 정적 표시
-  //    (문자열 애니메이션은 GitHub 등에서 잘 안 먹힐 수도 있음)
-  const dashAnim = `
+  // SMIL 애니메이션 (원형 그래프: 0->dashVal)
+  const circleAnim = `
     <animate
       attributeName="stroke-dasharray"
       from="0, ${circleCircum}"
-      to="${strokeVal}, ${circleCircum - strokeVal}"
+      to="${dashVal}, ${circleCircum - dashVal}"
+      dur="1s"
+      fill="freeze"
+    />
+  `;
+
+  // SMIL 애니메이션 (하단 바: width 0-> barWidth*ratio)
+  // ratio = circlePercent / 100?
+  // 하지만 여기서는 tier 범위별 ratio가 다르므로, 그냥 1초 동안 풀로 채우거나
+  // 혹은 원하는 만큼만 채우도록 수정 가능
+  // 여기서는 풀로 채우고, "progressText"로 비율 표기
+  const barAnim = `
+    <animate
+      attributeName="width"
+      from="0"
+      to="${barWidth * (circlePercent / 100)}"
       dur="1s"
       fill="freeze"
     />
   `;
 
   return `
-<svg width="450" height="180" viewBox="0 0 450 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- 카드 배경 -->
-  <rect width="450" height="180" rx="10" fill="${bgColor}" />
+<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  <!-- 배경 -->
+  <rect width="${width}" height="${height}" rx="10" fill="${bgColor}" />
 
-  <!-- 상단: Baekjoon / username#rank -->
-  <text x="20" y="30" fill="${textColor}" font-size="16" font-weight="bold">Baekjoon</text>
-  <text x="430" y="30" text-anchor="end" fill="${textColor}" font-size="16" font-weight="bold">
-    ${username} #${rank}
+  <!-- 상단: 티어명 & 숫자 (왼쪽), 유저 handle (오른쪽) -->
+  <text x="20" y="30" fill="${textColor}" font-size="16" font-weight="bold">
+    ${tierGroup} ${tierSub}
+  </text>
+  <text x="${
+    width - 20
+  }" y="30" text-anchor="end" fill="${textColor}" font-size="16" font-weight="bold">
+    ${handle}
   </text>
 
-  <!-- 원형 게이지 (왼쪽) - rating -->
-  <!-- 배치: cx=80, cy=100, r=40 -->
+  <!-- 원형 그래프 (왼쪽) - ratingPercent -->
   <circle
     cx="80" cy="100" r="${radius}"
-    stroke="${circleTrackColor}" stroke-width="8" fill="none"
+    stroke="${trackColor}" stroke-width="8" fill="none"
   />
   <circle
     cx="80" cy="100" r="${radius}"
-    stroke="${circleProgressColor}" stroke-width="8" fill="none"
+    stroke="${accentColor}" stroke-width="8" fill="none"
     stroke-dasharray="0, ${circleCircum}"
     stroke-linecap="round"
     transform="rotate(-90, 80, 100)"
   >
-    ${dashAnim}
+    ${circleAnim}
   </circle>
-
-  <!-- 중앙에 rating 표시 -->
+  <!-- 중앙 rating 숫자 -->
   <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="18" font-weight="bold">
     ${rating}
   </text>
 
-  <!-- 오른쪽 정보 (x=160, y=55) -->
-  <g transform="translate(160, 55)">
-    <!-- Solved -->
-    <text x="0" y="0" fill="${textColor}" font-size="14" font-weight="bold">Solved</text>
-    <text x="220" y="0" text-anchor="end" fill="${subTextColor}" font-size="14">
-      ${solvedCount}
-    </text>
-    <line x1="0" y1="5" x2="220" y2="5" stroke="${circleTrackColor}" stroke-width="1"/>
-
-    <!-- Tier -->
-    <text x="0" y="30" fill="${textColor}" font-size="14" font-weight="bold">Tier</text>
-    <text x="220" y="30" text-anchor="end" fill="${subTextColor}" font-size="14">
-      ${tierName}
-    </text>
-    <line x1="0" y1="35" x2="220" y2="35" stroke="${circleTrackColor}" stroke-width="1"/>
-
-    <!-- Exp -->
-    <text x="0" y="60" fill="${textColor}" font-size="14" font-weight="bold">Exp</text>
-    <text x="220" y="60" text-anchor="end" fill="${subTextColor}" font-size="14">
-      ${exp}
-    </text>
-    <line x1="0" y1="65" x2="220" y2="65" stroke="${circleTrackColor}" stroke-width="1"/>
+  <!-- 가운데 정보: rate, solved, class -->
+  <g transform="translate(150, 70)">
+    <text x="0" y="0" fill="${textColor}" font-size="14">rate: ${rating}</text>
+    <text x="0" y="20" fill="${textColor}" font-size="14">solved: ${solved}</text>
+    <text x="0" y="40" fill="${textColor}" font-size="14">class: ${classNum}</text>
   </g>
+
+  <!-- 하단 진행 바 -->
+  <rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}"
+        fill="${trackColor}" rx="4" />
+  <rect x="${barX}" y="${barY}" width="0" height="${barHeight}"
+        fill="${accentColor}" rx="4">
+    ${barAnim}
+  </rect>
+
+  <!-- 진행 바 텍스트 (오른쪽 정렬) -->
+  <text x="${width - 20}" y="${
+    barY - 2
+  }" text-anchor="end" fill="${subTextColor}"
+        font-size="12" alignment-baseline="baseline">
+    ${progressText}
+  </text>
 </svg>
 `;
 }
