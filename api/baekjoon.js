@@ -127,7 +127,7 @@ function renderSingleColumn({
   circlePercent,
   rank,
 }) {
-  const width = 400;
+  const width = 500;
   const height = 200;
 
   // 색상
