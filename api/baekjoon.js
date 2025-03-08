@@ -7,6 +7,7 @@ function getTierNameAndNumber(tierNum) {
   }
   const groups = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"];
   const subTiers = ["V", "IV", "III", "II", "I"];
+
   const groupIndex = Math.floor((tierNum - 1) / 5);
   const subIndex = (tierNum - 1) % 5;
   return {
@@ -53,7 +54,7 @@ module.exports = async (req, res) => {
     const classNum = data.class || 0;
     const handle = data.handle || username;
 
-    // 티어 범위 (레이팅 진행 바)
+    // 티어 범위 (하단 바)
     const [minRating, maxRating] = getTierRange(tierNum);
     let clamp = Math.max(rating, minRating);
     clamp = Math.min(clamp, maxRating);
@@ -68,8 +69,8 @@ module.exports = async (req, res) => {
     const ratingCapped = Math.min(rating, 4000);
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
-    // 3. SVG 생성 (SMIL, 1초로 빠르게)
-    const svg = renderSingleRunSMIL({
+    // 3. SVG 생성
+    const svg = renderWithTextFade({
       tierGroup,
       tierSub,
       rating,
@@ -92,7 +93,12 @@ module.exports = async (req, res) => {
 function sendErrorCard(res, message) {
   const errorSvg = `
     <svg width="450" height="120" xmlns="http://www.w3.org/2000/svg">
-      <rect width="450" height="120" rx="10" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+      <rect
+        width="450" height="120"
+        rx="10"
+        fill="#0d1117"
+        stroke="#30363d" stroke-width="2"
+      />
       <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold">${message}</text>
     </svg>`;
   res.setHeader("Content-Type", "image/svg+xml");
@@ -100,15 +106,12 @@ function sendErrorCard(res, message) {
 }
 
 /**
- * LeetCode 다크 테마(#0d1117) +
- *  - 테두리 둥글기: rx="10" (원하는대로 조정 가능)
- *  - 외곽선(stroke="#30363d" stroke-width="2")
- *  - SMIL 애니메이션 dur="1s"
- *  - (rating / 4000) 원형 게이지
- *  - (min~max) 하단 바
- *  - 로딩 시 한 번만 재생
+ * ✅ LeetCode 다크 테마 + border radius & outline
+ * ✅ 텍스트도 SMIL 페이드 인 (opacity 0→1, dur=1s)
+ * ✅ 원형 게이지 & 하단 바 애니메이션 (1s)
+ * ✅ 로딩 시 한 번만 재생 (fill="freeze")
  */
-function renderSingleRunSMIL({
+function renderWithTextFade({
   tierGroup,
   tierSub,
   rating,
@@ -139,8 +142,9 @@ function renderSingleRunSMIL({
   const barY = 160;
   const barWidth = width - 40;
   const barHeight = 8;
+  const barFillWidth = Math.round((circlePercent / 100) * barWidth);
 
-  // 원형 그래프 애니 (1초)
+  // SMIL (1초)
   const circleAnim = `
     <animate
       attributeName="stroke-dasharray"
@@ -151,17 +155,30 @@ function renderSingleRunSMIL({
       fill="freeze"
     />
   `;
-  // 하단 바 애니 (1초)
   const barAnim = `
     <animate
       attributeName="width"
       from="0"
-      to="${barWidth * (circlePercent / 100)}"
+      to="${barFillWidth}"
       begin="0s"
       dur="1s"
       fill="freeze"
     />
   `;
+
+  // 텍스트 페이드 인 (opacity=0 -> 1, 1초)
+  function fadeIn(begin = "0s") {
+    return `
+      <animate
+        attributeName="opacity"
+        from="0"
+        to="1"
+        dur="1s"
+        begin="${begin}"
+        fill="freeze"
+      />
+    `;
+  }
 
   return `
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -173,69 +190,89 @@ function renderSingleRunSMIL({
     stroke="#30363d" stroke-width="2"
   />
 
-  <!-- 상단: 티어 + handle -->
-  <text x="20" y="30" fill="${textColor}" font-size="16" font-weight="bold">
+  <!-- 상단: 티어 + handle (페이드 인) -->
+  <text x="20" y="30" fill="${textColor}" font-size="16" font-weight="bold" opacity="0">
     ${tierGroup} ${tierSub}
+    ${fadeIn("0s")}
   </text>
   <text x="${
     width - 20
-  }" y="30" text-anchor="end" fill="${textColor}" font-size="16" font-weight="bold">
+  }" y="30" text-anchor="end" fill="${textColor}" font-size="16" font-weight="bold" opacity="0">
     ${handle}
+    ${fadeIn("0s")}
   </text>
 
-  <!-- 원형 그래프 (왼쪽) -->
+  <!-- 원형 게이지 배경 (페이드 인) -->
   <circle
     cx="80" cy="100" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
-  />
+    opacity="0"
+  >
+    ${fadeIn("0s")}
+  </circle>
+
+  <!-- 원형 게이지 진행 (페이드 인 + dasharray 애니메이션) -->
   <circle
     cx="80" cy="100" r="${radius}"
     stroke="${accentColor}" stroke-width="8" fill="none"
     stroke-dasharray="0, ${circleCircum}"
     stroke-linecap="round"
     transform="rotate(-90, 80, 100)"
+    opacity="0"
   >
+    ${fadeIn("0s")}
     ${circleAnim}
   </circle>
-  <!-- 중앙 rating 숫자 -->
-  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="18" font-weight="bold">
+
+  <!-- 중앙 rating 숫자 (페이드 인) -->
+  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="18" font-weight="bold" opacity="0">
     ${rating}
+    ${fadeIn("0.1s")}
   </text>
 
-  <!-- 가운데 info -->
-  <g transform="translate(150, 70)">
+  <!-- 가운데 info (rate/solved/class) (페이드 인) -->
+  <g transform="translate(150, 70)" opacity="0">
+    ${fadeIn("0.2s")}
     <text x="0" y="0" fill="${textColor}" font-size="16">rate: ${rating}</text>
     <text x="0" y="25" fill="${textColor}" font-size="16">solved: ${solved}</text>
     <text x="0" y="50" fill="${textColor}" font-size="16">class: ${classNum}</text>
   </g>
 
-  <!-- 하단 바 (트랙) -->
+  <!-- 하단 바 (트랙, 페이드 인) -->
   <rect
     x="${barX}" y="${barY}"
     width="${barWidth}" height="${barHeight}"
     fill="${trackColor}" rx="4"
-  />
+    opacity="0"
+  >
+    ${fadeIn("0.3s")}
+  </rect>
+
+  <!-- 하단 바 (채워지는 부분) -->
   <rect
     x="${barX}" y="${barY}"
     width="0" height="${barHeight}"
     fill="${accentColor}" rx="4"
+    opacity="0"
   >
+    ${fadeIn("0.3s")}
     ${barAnim}
   </rect>
 
-  <!-- 바 위쪽 오른쪽: 퍼센트 -->
-  <!-- (minRating~maxRating) 비율은 굳이 표기 안 했지만 필요하면 추가 가능 -->
+  <!-- 바 위쪽 오른쪽: 퍼센트 (페이드 인) -->
   <text x="${width - 20}" y="${
     barY - 3
-  }" text-anchor="end" fill="${subTextColor}" font-size="14">
+  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
     ${percentText}
+    ${fadeIn("0.4s")}
   </text>
 
-  <!-- 바 아래 오른쪽: fraction (rating / maxRating) -->
+  <!-- 바 아래 오른쪽: 분수 (fraction) (페이드 인) -->
   <text x="${width - 20}" y="${
     barY + barHeight + 15
-  }" text-anchor="end" fill="${subTextColor}" font-size="14">
+  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
     ${fractionText}
+    ${fadeIn("0.4s")}
   </text>
 </svg>
 `;
