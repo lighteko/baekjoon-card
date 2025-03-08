@@ -41,7 +41,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // solved.ac API
+    // solved.ac API로 사용자 정보
     const { data } = await axios.get(
       `https://solved.ac/api/v3/user/show?handle=${username}`
     );
@@ -62,7 +62,7 @@ module.exports = async (req, res) => {
     const ratio = (clamp - minRating) / (maxRating - minRating);
     const progressPercent = Math.round(ratio * 100);
 
-    // 퍼센트 텍스트
+    // 하단 바 텍스트
     const fractionText = `${rating} / ${maxRating}`;
     const percentText = `${progressPercent}%`;
 
@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
     const ratingCapped = Math.min(rating, 4000);
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
-    // SVG 생성
+    // 최종 SVG 생성
     const svg = renderLeftGaugeCard({
       tierGroup,
       tierSub,
@@ -108,12 +108,14 @@ function sendErrorCard(res, message) {
 }
 
 /**
- * 🏆 크기: 400×300
- * 🏆 상단(티어/닉네임) 폰트 더 큼
- * 🏆 왼쪽 큰 원형 게이지(cx=100, cy=150, r=60)
- * 🏆 오른쪽 4줄 텍스트 (x=220, y=110)
+ * 🏆 400×300 카드
+ * 🏆 상단(티어/닉네임) 폰트=26
+ * 🏆 원형 게이지(왼쪽) bounding box 왼쪽=20 => r=50, cx=70
+ * 🏆 게이지 위치(cx=70, cy=150, r=50)
+ * 🏆 게이지 중앙 레이팅=폰트=30
+ * 🏆 오른쪽 4줄 텍스트(x=220, y=110, 폰트=22)
  * 🏆 하단 바 y=260
- * 🏆 SMIL 1초 + 텍스트 페이드 인
+ * 🏆 SMIL 1초 + 페이드 인
  */
 function renderLeftGaugeCard({
   tierGroup,
@@ -138,8 +140,9 @@ function renderLeftGaugeCard({
   const accentColor = "#f79a09";
 
   // 원형 게이지
-  const radius = 60;
-  const cx = 100;
+  // bounding box left=20 => cx-r=20 => cx=70 if r=50
+  const radius = 50;
+  const cx = 70;
   const cy = 150;
   const circleCircum = 2 * Math.PI * radius;
   const dashVal = (circlePercent / 100) * circleCircum;
@@ -211,7 +214,7 @@ function renderLeftGaugeCard({
     ${fadeIn("0s")}
   </text>
 
-  <!-- 원형 게이지 배경 (왼쪽) -->
+  <!-- 원형 게이지 배경 -->
   <circle
     cx="${cx}" cy="${cy}" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
@@ -247,14 +250,13 @@ function renderLeftGaugeCard({
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 오른쪽 4줄 텍스트 -->
-  <!-- transform="translate(220, 110)" => 약간 중간쯤 -->
+  <!-- 오른쪽 4줄 텍스트 (폰트=22) -->
   <g transform="translate(220, 110)" opacity="0">
     ${fadeIn("0.2s")}
-    <text x="0"  y="0"   fill="${textColor}" font-size="18">rate: ${rating}</text>
-    <text x="0"  y="25"  fill="${textColor}" font-size="18">solved: ${solved}</text>
-    <text x="0"  y="50"  fill="${textColor}" font-size="18">class: ${classNum}</text>
-    <text x="0"  y="75"  fill="${textColor}" font-size="18">rank: #${rank}</text>
+    <text x="0"  y="0"   fill="${textColor}" font-size="22">rate: ${rating}</text>
+    <text x="0"  y="30"  fill="${textColor}" font-size="22">solved: ${solved}</text>
+    <text x="0"  y="60"  fill="${textColor}" font-size="22">class: ${classNum}</text>
+    <text x="0"  y="90"  fill="${textColor}" font-size="22">rank: #${rank}</text>
   </g>
 
   <!-- 하단 바 -->
@@ -292,7 +294,7 @@ function renderLeftGaugeCard({
   <!-- 바 아래 오른쪽: 분수 -->
   <text
     x="${width - 20}"
-    y="${barY + barHeight + 20}"
+    y="${barY + ${barHeight} + 20}"
     text-anchor="end"
     fill="${subTextColor}"
     font-size="16"
