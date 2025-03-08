@@ -41,12 +41,12 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // 1. solved.ac API 호출
+    // solved.ac API
     const { data } = await axios.get(
       `https://solved.ac/api/v3/user/show?handle=${username}`
     );
 
-    // 2. 주요 정보
+    // 주요 정보
     const tierNum = data.tier || 0;
     const { tierGroup, tierSub } = getTierNameAndNumber(tierNum);
     const rating = data.rating || 0;
@@ -55,22 +55,22 @@ module.exports = async (req, res) => {
     const handle = data.handle || username;
     const rank = data.rank || 0;
 
-    // 티어 범위 (하단 바)
+    // 티어 범위
     const [minRating, maxRating] = getTierRange(tierNum);
     let clamp = Math.max(rating, minRating);
     clamp = Math.min(clamp, maxRating);
     const ratio = (clamp - minRating) / (maxRating - minRating);
     const progressPercent = Math.round(ratio * 100);
 
-    // 분수 텍스트 / 퍼센트 텍스트
+    // 퍼센트 텍스트
     const fractionText = `${rating} / ${maxRating}`;
     const percentText = `${progressPercent}%`;
 
-    // 원형 게이지 (rating / 4000)
+    // 원형 게이지 퍼센트 (rating / 4000)
     const ratingCapped = Math.min(rating, 4000);
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
-    // 3. SVG 생성
+    // SVG 생성
     const svg = renderLargeCard({
       tierGroup,
       tierSub,
@@ -108,11 +108,12 @@ function sendErrorCard(res, message) {
 }
 
 /**
- * 🏆 크기: width=400, height=300
- * 🏆 상단 폰트=24, 원형 게이지(cx=80, cy=130, r=50), 중앙 텍스트=26
- * 🏆 가운데 info 4줄 (단일 열), 폰트=18
- * 🏆 하단 바 y=260, 폰트=16
- * 🏆 SMIL 1초 + 페이드 인
+ * 🏆 크기: 400×300
+ * 🏆 상단 텍스트(티어/닉네임) 폰트 키움
+ * 🏆 원형 게이지(cx=200, cy=150, r=60) → 중앙 하단
+ * 🏆 가운데(하단부)에 4줄 info
+ * 🏆 하단 바 y=280, 폰트=16
+ * 🏆 SMIL 1초 + 텍스트 페이드 인
  */
 function renderLargeCard({
   tierGroup,
@@ -137,13 +138,15 @@ function renderLargeCard({
   const accentColor = "#f79a09";
 
   // 원형 게이지
-  const radius = 50;
+  const radius = 60; // 좀 더 크게
+  const cx = 200;    // 수평 중앙
+  const cy = 150;    // 수직 중앙-ish
   const circleCircum = 2 * Math.PI * radius;
   const dashVal = (circlePercent / 100) * circleCircum;
 
   // 하단 바
   const barX = 20;
-  const barY = 260;
+  const barY = 280;
   const barWidth = width - 40; // 360
   const barHeight = 8;
   const barFillWidth = Math.round((circlePercent / 100) * barWidth);
@@ -185,7 +188,11 @@ function renderLargeCard({
   }
 
   return `
-<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+<svg
+  width="${width}" height="${height}"
+  viewBox="0 0 ${width} ${height}"
+  xmlns="http://www.w3.org/2000/svg"
+>
   <!-- 배경 + 테두리 -->
   <rect
     width="${width}" height="${height}"
@@ -194,19 +201,19 @@ function renderLargeCard({
     stroke="#30363d" stroke-width="2"
   />
 
-  <!-- 상단: 티어 + handle (폰트=24) -->
-  <text x="20" y="45" fill="${textColor}" font-size="24" font-weight="bold" opacity="0">
+  <!-- 상단 텍스트 (티어 / 닉네임) -->
+  <text x="20" y="50" fill="${textColor}" font-size="26" font-weight="bold" opacity="0">
     ${tierGroup} ${tierSub}
     ${fadeIn("0s")}
   </text>
-  <text x="${width - 20}" y="45" text-anchor="end" fill="${textColor}" font-size="24" font-weight="bold" opacity="0">
+  <text x="${width - 20}" y="50" text-anchor="end" fill="${textColor}" font-size="26" font-weight="bold" opacity="0">
     ${handle}
     ${fadeIn("0s")}
   </text>
 
-  <!-- 원형 게이지 배경 (cx=80, cy=130, r=50) -->
+  <!-- 원형 게이지 배경 -->
   <circle
-    cx="80" cy="130" r="${radius}"
+    cx="${cx}" cy="${cy}" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
     opacity="0"
   >
@@ -215,33 +222,34 @@ function renderLargeCard({
 
   <!-- 원형 게이지 진행 -->
   <circle
-    cx="80" cy="130" r="${radius}"
+    cx="${cx}" cy="${cy}" r="${radius}"
     stroke="${accentColor}" stroke-width="8" fill="none"
     stroke-dasharray="0, ${circleCircum}"
     stroke-linecap="round"
-    transform="rotate(-90, 80, 130)"
+    transform="rotate(-90, ${cx}, ${cy})"
     opacity="0"
   >
     ${fadeIn("0s")}
     ${circleAnim}
   </circle>
 
-  <!-- 중앙 rating 숫자 (폰트=26) -->
-  <text x="80" y="135" text-anchor="middle" fill="${textColor}" font-size="26" font-weight="bold" opacity="0">
+  <!-- 중앙 rating 숫자 (조금 더 크게) -->
+  <text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="${textColor}" font-size="30" font-weight="bold" opacity="0">
     ${rating}
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 가운데 info (4줄, 폰트=18, 줄 간격=30) -->
-  <g transform="translate(160, 80)" opacity="0">
+  <!-- 가운데 info (4줄, 아래쪽에 배치) -->
+  <!-- x=50, y=200 => 라인 간격=25 => 4줄이면 0,25,50,75 => 최대 75 아래로 -->
+  <g transform="translate(50, 200)" opacity="0">
     ${fadeIn("0.2s")}
     <text x="0"  y="0"   fill="${textColor}" font-size="18">rate: ${rating}</text>
-    <text x="0"  y="30"  fill="${textColor}" font-size="18">solved: ${solved}</text>
-    <text x="0"  y="60"  fill="${textColor}" font-size="18">class: ${classNum}</text>
-    <text x="0"  y="90"  fill="${textColor}" font-size="18">rank: #${rank}</text>
+    <text x="0"  y="25"  fill="${textColor}" font-size="18">solved: ${solved}</text>
+    <text x="0"  y="50"  fill="${textColor}" font-size="18">class: ${classNum}</text>
+    <text x="0"  y="75"  fill="${textColor}" font-size="18">rank: #${rank}</text>
   </g>
 
-  <!-- 하단 바 (y=260, height=8) -->
+  <!-- 하단 바 -->
   <rect
     x="${barX}" y="${barY}"
     width="${barWidth}" height="${barHeight}"
@@ -251,7 +259,7 @@ function renderLargeCard({
     ${fadeIn("0.3s")}
   </rect>
 
-  <!-- 하단 바 (채워지는 부분) -->
+  <!-- 채워지는 부분 -->
   <rect
     x="${barX}" y="${barY}"
     width="0" height="${barHeight}"
@@ -262,14 +270,22 @@ function renderLargeCard({
     ${barAnim}
   </rect>
 
-  <!-- 바 위쪽 오른쪽: 퍼센트 (폰트=16) -->
+  <!-- 바 위쪽 오른쪽: 퍼센트 -->
   <text x="${width - 20}" y="${barY - 3}" text-anchor="end" fill="${subTextColor}" font-size="16" opacity="0">
     ${percentText}
     ${fadeIn("0.4s")}
   </text>
 
-  <!-- 바 아래 오른쪽: 분수 (폰트=16) -->
-  <text x="${width - 20}" y="${barY + barHeight + 20}" text-anchor="end" fill="${subTextColor}" font-size="16" opacity="0">
+  <!-- 바 아래 오른쪽: 분수 -->
+  <!-- y=barY + barHeight + 15 => 280 + 8 + 15=303 (3px from bottom) -->
+  <text
+    x="${width - 20}"
+    y="${barY + barHeight + 15}"
+    text-anchor="end"
+    fill="${subTextColor}"
+    font-size="16"
+    opacity="0"
+  >
     ${fractionText}
     ${fadeIn("0.4s")}
   </text>
