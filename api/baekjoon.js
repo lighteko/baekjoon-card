@@ -127,8 +127,8 @@ function renderSingleColumn({
   circlePercent,
   rank,
 }) {
-  const width = 500;
-  const height = 200;
+  const width = 400;
+  const height = 300;
 
   // 색상
   const bgColor = "#101010";
