@@ -1,120 +1,3 @@
-const axios = require("axios");
-
-/** 티어 번호(1~30)를 "Bronze IV" 형태로 변환 */
-function getTierNameAndNumber(tierNum) {
-  if (tierNum < 1 || tierNum > 30) {
-    return { tierGroup: "Unranked", tierSub: "" };
-  }
-  const groups = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"];
-  const subTiers = ["V", "IV", "III", "II", "I"];
-
-  const groupIndex = Math.floor((tierNum - 1) / 5);
-  const subIndex = (tierNum - 1) % 5;
-  return {
-    tierGroup: groups[groupIndex],
-    tierSub: subTiers[subIndex],
-  };
-}
-
-/** 티어 번호별 대략적 레이팅 범위 (예시) */
-function getTierRange(tierNum) {
-  if (tierNum >= 1 && tierNum <= 5) {
-    return [800, 1299];
-  } else if (tierNum <= 10) {
-    return [1300, 1599];
-  } else if (tierNum <= 15) {
-    return [1600, 1899];
-  } else if (tierNum <= 20) {
-    return [1900, 2199];
-  } else if (tierNum <= 25) {
-    return [2200, 2699];
-  } else if (tierNum <= 30) {
-    return [2700, 4000];
-  }
-  return [0, 4000]; // Unranked
-}
-
-module.exports = async (req, res) => {
-  const { username } = req.query;
-  if (!username) {
-    return sendErrorCard(res, "No username provided");
-  }
-
-  try {
-    // 1. solved.ac API 호출
-    const { data } = await axios.get(
-      `https://solved.ac/api/v3/user/show?handle=${username}`
-    );
-
-    // 2. 주요 정보
-    const tierNum = data.tier || 0;
-    const { tierGroup, tierSub } = getTierNameAndNumber(tierNum);
-    const rating = data.rating || 0;
-    const solved = data.solvedCount || 0;
-    const classNum = data.class || 0;
-    const handle = data.handle || username;
-    const rank = data.rank || 0;
-
-    // 티어 범위 (하단 바)
-    const [minRating, maxRating] = getTierRange(tierNum);
-    let clamp = Math.max(rating, minRating);
-    clamp = Math.min(clamp, maxRating);
-    const ratio = (clamp - minRating) / (maxRating - minRating);
-    const progressPercent = Math.round(ratio * 100);
-
-    // 분수 텍스트 / 퍼센트 텍스트
-    const fractionText = `${rating} / ${maxRating}`;
-    const percentText = `${progressPercent}%`;
-
-    // 원형 게이지 (rating / 4000)
-    const ratingCapped = Math.min(rating, 4000);
-    const circlePercent = Math.round((ratingCapped / 4000) * 100);
-
-    // 3. SVG 생성
-    const svg = renderSingleColumn({
-      tierGroup,
-      tierSub,
-      rating,
-      solved,
-      classNum,
-      handle,
-      fractionText,
-      percentText,
-      circlePercent,
-      rank,
-    });
-
-    res.setHeader("Content-Type", "image/svg+xml");
-    res.send(svg);
-  } catch (err) {
-    console.error(err);
-    sendErrorCard(res, "Error fetching user data");
-  }
-};
-
-function sendErrorCard(res, message) {
-  const errorSvg = `
-    <svg width="300" height="120" xmlns="http://www.w3.org/2000/svg">
-      <rect
-        width="300" height="120"
-        rx="10"
-        fill="#0d1117"
-        stroke="#30363d" stroke-width="2"
-      />
-      <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold">${message}</text>
-    </svg>`;
-  res.setHeader("Content-Type", "image/svg+xml");
-  res.send(errorSvg);
-}
-
-/**
- * 🏆 LeetCode 다크 테마 + border + rx=10
- * 🏆 width=300, height=200
- * 🏆 폰트 크기 상단=20, 가운데=16, 게이지=22, 하단=14
- * 🏆 가운데 info를 단일 열(4줄)로 배치 -> 잘리지 않도록
- * 🏆 하단 바 y=160
- * 🏆 SMIL 1초 애니 + 텍스트 페이드 인
- */
 function renderSingleColumn({
   tierGroup,
   tierSub,
@@ -130,26 +13,28 @@ function renderSingleColumn({
   const width = 400;
   const height = 300;
 
-  // 색상
+  // 색상 설정
   const bgColor = "#101010";
   const textColor = "#ffffff";
   const subTextColor = "#C9D1D9";
   const trackColor = "#30363d";
   const accentColor = "#f79a09";
 
-  // 원형 게이지
-  const radius = 40;
+  // 원형 게이지 (비율에 맞춰 확장)
+  const gaugeCenterX = 80;           // 기존 60 -> 80 (수평 확장)
+  const gaugeCenterY = 150;          // 기존 100 -> 150 (수직 확장)
+  const radius = 60;                 // 기존 40 -> 60 (비율에 맞춰)
   const circleCircum = 2 * Math.PI * radius;
   const dashVal = (circlePercent / 100) * circleCircum;
 
-  // 하단 바
+  // 하단 바 (게이지 밑)
   const barX = 20;
-  const barY = 160;
-  const barWidth = width - 40;
-  const barHeight = 8;
+  const barY = 240;                // 기존 160 -> 240 (80% 정도 아래)
+  const barWidth = width - 40;     // 360
+  const barHeight = 12;            // 기존 8 -> 12
   const barFillWidth = Math.round((circlePercent / 100) * barWidth);
 
-  // SMIL (1초)
+  // 애니메이션 (원형, 바)
   const circleAnim = `
     <animate
       attributeName="stroke-dasharray"
@@ -171,7 +56,7 @@ function renderSingleColumn({
     />
   `;
 
-  // 텍스트 페이드 인
+  // 텍스트 페이드인 함수
   function fadeIn(begin = "0s") {
     return `
       <animate
@@ -187,65 +72,62 @@ function renderSingleColumn({
 
   return `
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-  <!-- 배경 + 테두리 -->
+  <!-- 배경과 테두리 (rx도 살짝 늘렸어) -->
   <rect
     width="${width}" height="${height}"
-    rx="8"
+    rx="12"
     fill="${bgColor}"
     stroke="#30363d" stroke-width="2"
   />
 
-  <!-- 상단: 티어 + handle -->
-  <text x="20" y="35" fill="${textColor}" font-size="20" font-weight="bold" opacity="0">
+  <!-- 상단: 티어와 handle (폰트 크기 30, 여백 조정) -->
+  <text x="25" y="50" fill="${textColor}" font-size="30" font-weight="bold" opacity="0">
     ${tierGroup} ${tierSub}
     ${fadeIn("0s")}
   </text>
-  <text x="${
-    width - 20
-  }" y="35" text-anchor="end" fill="${textColor}" font-size="20" font-weight="bold" opacity="0">
+  <text x="${width - 25}" y="50" text-anchor="end" fill="${textColor}" font-size="30" font-weight="bold" opacity="0">
     ${handle}
     ${fadeIn("0s")}
   </text>
 
   <!-- 원형 게이지 배경 -->
   <circle
-    cx="60" cy="100" r="${radius}"
+    cx="${gaugeCenterX}" cy="${gaugeCenterY}" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
     opacity="0"
   >
     ${fadeIn("0s")}
   </circle>
 
-  <!-- 원형 게이지 진행 -->
+  <!-- 원형 게이지 진행 (애니메이션 적용) -->
   <circle
-    cx="60" cy="100" r="${radius}"
+    cx="${gaugeCenterX}" cy="${gaugeCenterY}" r="${radius}"
     stroke="${accentColor}" stroke-width="8" fill="none"
     stroke-dasharray="0, ${circleCircum}"
     stroke-linecap="round"
-    transform="rotate(-90, 60, 100)"
+    transform="rotate(-90, ${gaugeCenterX}, ${gaugeCenterY})"
     opacity="0"
   >
     ${fadeIn("0s")}
     ${circleAnim}
   </circle>
 
-  <!-- 중앙 rating 숫자 -->
-  <text x="60" y="105" text-anchor="middle" fill="${textColor}" font-size="22" font-weight="bold" opacity="0">
+  <!-- 중앙에 rating 숫자 (폰트 크기 33) -->
+  <text x="${gaugeCenterX}" y="${gaugeCenterY + 5}" text-anchor="middle" fill="${textColor}" font-size="33" font-weight="bold" opacity="0">
     ${rating}
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 가운데 info (4줄) -->
-  <!-- x=120으로 잡고, 줄 간격 20~25 정도 -->
-  <g transform="translate(120, 60)" opacity="0">
+  <!-- 오른쪽에 4줄 info (rate, solved, class, rank) -->
+  <g transform="translate(160,90)" opacity="0">
     ${fadeIn("0.2s")}
-    <text x="0"  y="0"   fill="${textColor}" font-size="16">rate: ${rating}</text>
-    <text x="0"  y="25"  fill="${textColor}" font-size="16">solved: ${solved}</text>
-    <text x="0"  y="50"  fill="${textColor}" font-size="16">class: ${classNum}</text>
-    <text x="0"  y="75"  fill="${textColor}" font-size="16">rank: #${rank}</text>
+    <text x="0" y="0" fill="${textColor}" font-size="24">rate: ${rating}</text>
+    <text x="0" y="35" fill="${textColor}" font-size="24">solved: ${solved}</text>
+    <text x="0" y="70" fill="${textColor}" font-size="24">class: ${classNum}</text>
+    <text x="0" y="105" fill="${textColor}" font-size="24">rank: #${rank}</text>
   </g>
 
-  <!-- 하단 바 (트랙) -->
+  <!-- 하단 바: 트랙 -->
   <rect
     x="${barX}" y="${barY}"
     width="${barWidth}" height="${barHeight}"
@@ -255,7 +137,7 @@ function renderSingleColumn({
     ${fadeIn("0.3s")}
   </rect>
 
-  <!-- 하단 바 (채워지는 부분) -->
+  <!-- 하단 바: 채워지는 부분 (애니메이션 적용) -->
   <rect
     x="${barX}" y="${barY}"
     width="0" height="${barHeight}"
@@ -266,18 +148,14 @@ function renderSingleColumn({
     ${barAnim}
   </rect>
 
-  <!-- 바 위쪽 오른쪽: 퍼센트 (폰트 14) -->
-  <text x="${width - 20}" y="${
-    barY - 3
-  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
+  <!-- 바 위쪽 오른쪽: 퍼센트 텍스트 (폰트 크기 21) -->
+  <text x="${width - 20}" y="${barY - 5}" text-anchor="end" fill="${subTextColor}" font-size="21" opacity="0">
     ${percentText}
     ${fadeIn("0.4s")}
   </text>
 
-  <!-- 바 아래 오른쪽: 분수 (폰트 14) -->
-  <text x="${width - 20}" y="${
-    barY + barHeight + 20
-  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
+  <!-- 바 아래쪽 오른쪽: 분수 텍스트 (폰트 크기 21) -->
+  <text x="${width - 20}" y="${barY + barHeight + 20}" text-anchor="end" fill="${subTextColor}" font-size="21" opacity="0">
     ${fractionText}
     ${fadeIn("0.4s")}
   </text>
