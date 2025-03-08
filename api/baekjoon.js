@@ -71,7 +71,7 @@ module.exports = async (req, res) => {
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
     // 3. SVG 생성
-    const svg = renderCleanLayout({
+    const svg = renderSingleColumn({
       tierGroup,
       tierSub,
       rating,
@@ -94,9 +94,9 @@ module.exports = async (req, res) => {
 
 function sendErrorCard(res, message) {
   const errorSvg = `
-    <svg width="450" height="120" xmlns="http://www.w3.org/2000/svg">
+    <svg width="300" height="120" xmlns="http://www.w3.org/2000/svg">
       <rect
-        width="450" height="120"
+        width="300" height="120"
         rx="10"
         fill="#0d1117"
         stroke="#30363d" stroke-width="2"
@@ -109,12 +109,13 @@ function sendErrorCard(res, message) {
 
 /**
  * 🏆 LeetCode 다크 테마 + border + rx=10
+ * 🏆 width=300, height=200
  * 🏆 폰트 크기 상단=20, 가운데=16, 게이지=22, 하단=14
- * 🏆 2×2 그리드 (rate/solved | class/rank), 오른쪽 열 안 잘리도록 x좌표 조정
+ * 🏆 가운데 info를 단일 열(4줄)로 배치 -> 잘리지 않도록
  * 🏆 하단 바 y=160
  * 🏆 SMIL 1초 애니 + 텍스트 페이드 인
  */
-function renderCleanLayout({
+function renderSingleColumn({
   tierGroup,
   tierSub,
   rating,
@@ -130,7 +131,7 @@ function renderCleanLayout({
   const height = 200;
 
   // 색상
-  const bgColor = "#101010";
+  const bgColor = "#0d1117";
   const textColor = "#ffffff";
   const subTextColor = "#C9D1D9";
   const trackColor = "#30363d";
@@ -189,7 +190,7 @@ function renderCleanLayout({
   <!-- 배경 + 테두리 -->
   <rect
     width="${width}" height="${height}"
-    rx="8"
+    rx="10"
     fill="${bgColor}"
     stroke="#30363d" stroke-width="2"
   />
@@ -208,7 +209,7 @@ function renderCleanLayout({
 
   <!-- 원형 게이지 배경 -->
   <circle
-    cx="80" cy="100" r="${radius}"
+    cx="60" cy="100" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
     opacity="0"
   >
@@ -217,11 +218,11 @@ function renderCleanLayout({
 
   <!-- 원형 게이지 진행 -->
   <circle
-    cx="80" cy="100" r="${radius}"
+    cx="60" cy="100" r="${radius}"
     stroke="${accentColor}" stroke-width="8" fill="none"
     stroke-dasharray="0, ${circleCircum}"
     stroke-linecap="round"
-    transform="rotate(-90, 80, 100)"
+    transform="rotate(-90, 60, 100)"
     opacity="0"
   >
     ${fadeIn("0s")}
@@ -229,23 +230,19 @@ function renderCleanLayout({
   </circle>
 
   <!-- 중앙 rating 숫자 -->
-  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="22" font-weight="bold" opacity="0">
+  <text x="60" y="105" text-anchor="middle" fill="${textColor}" font-size="22" font-weight="bold" opacity="0">
     ${rating}
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 가운데 info (2×2 그리드) -->
-  <!-- 그룹 위치 x=140, 첫 열 x=0, 두 번째 열 x=110 -->
-  <!-- 폰트 크기 16, 행 간격 30 -->
-  <g transform="translate(140, 70)" opacity="0">
+  <!-- 가운데 info (4줄) -->
+  <!-- x=120으로 잡고, 줄 간격 20~25 정도 -->
+  <g transform="translate(120, 60)" opacity="0">
     ${fadeIn("0.2s")}
-    <!-- 첫 열 -->
-    <text x="0"   y="0"  fill="${textColor}" font-size="16">rate: ${rating}</text>
-    <text x="0"   y="30" fill="${textColor}" font-size="16">solved: ${solved}</text>
-
-    <!-- 두 번째 열 -->
-    <text x="110" y="0"  fill="${textColor}" font-size="16">class: ${classNum}</text>
-    <text x="110" y="30" fill="${textColor}" font-size="16">rank: #${rank}</text>
+    <text x="0"  y="0"   fill="${textColor}" font-size="16">rate: ${rating}</text>
+    <text x="0"  y="25"  fill="${textColor}" font-size="16">solved: ${solved}</text>
+    <text x="0"  y="50"  fill="${textColor}" font-size="16">class: ${classNum}</text>
+    <text x="0"  y="75"  fill="${textColor}" font-size="16">rank: #${rank}</text>
   </g>
 
   <!-- 하단 바 (트랙) -->
