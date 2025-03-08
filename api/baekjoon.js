@@ -41,7 +41,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // solved.ac API
+    // solved.ac API로 사용자 정보
     const { data } = await axios.get(
       `https://solved.ac/api/v3/user/show?handle=${username}`
     );
@@ -110,8 +110,8 @@ function sendErrorCard(res, message) {
 /**
  * 🏆 400×300 카드
  * 🏆 상단(티어/닉네임) 폰트=26
- * 🏆 왼쪽 큰 원형 게이지(r=60), x=70
- * 🏆 게이지 중앙 텍스트 dominant-baseline="middle"
+ * 🏆 원형 게이지(왼쪽) => 지름=120 => r=60 => 왼쪽이 x=20 => cx=80
+ * 🏆 게이지 중앙 텍스트: dominant-baseline="middle"
  * 🏆 오른쪽 4줄 텍스트(x=220, y=110, 폰트=22)
  * 🏆 하단 바 y=260
  * 🏆 SMIL 1초 + 텍스트 페이드 인
@@ -138,10 +138,9 @@ function renderLeftGaugeCard({
   const trackColor = "#30363d";
   const accentColor = "#f79a09";
 
-  // 원형 게이지
-  // left=20 => center x=70, radius=60 => leftmost=70-60=10 (좀 더 여유)
+  // 게이지: 왼쪽 x=20 => center x=80 when r=60
   const radius = 60;
-  const cx = 70;
+  const cx = 80;
   const cy = 150;
   const circleCircum = 2 * Math.PI * radius;
   const dashVal = (circlePercent / 100) * circleCircum;
@@ -153,7 +152,7 @@ function renderLeftGaugeCard({
   const barHeight = 8;
   const barFillWidth = Math.round((circlePercent / 100) * barWidth);
 
-  // SMIL 애니
+  // SMIL
   const circleAnim = `
     <animate
       attributeName="stroke-dasharray"
@@ -200,7 +199,7 @@ function renderLeftGaugeCard({
     width="${width}" height="${height}"
     rx="8"
     fill="${bgColor}"
-    stroke="#30363d" stroke-width="2"
+    stroke="#404040" stroke-width="2"
   />
 
   <!-- 상단 텍스트 (티어 / 닉네임) -->
@@ -235,7 +234,7 @@ function renderLeftGaugeCard({
     ${circleAnim}
   </circle>
 
-  <!-- 중앙 rating 숫자 (dominant-baseline으로 정확히 중앙 정렬) -->
+  <!-- 중앙 rating 숫자 -->
   <text
     x="${cx}"
     y="${cy}"
