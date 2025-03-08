@@ -72,7 +72,7 @@ module.exports = async (req, res) => {
     const circlePercent = Math.round((ratingCap / 4000) * 100);
 
     // 3. SVG 생성
-    const svg = renderLeetTierCard({
+    const svg = renderAnimatedCard({
       tierGroup,
       tierSub,
       rating,
@@ -104,13 +104,12 @@ function sendErrorCard(res, message) {
 }
 
 /**
- * LeetCode 다크 테마(배경=#0d1117) + 원형 그래프
- * 하단 바:
- *   - 퍼센트(%): 바 위쪽 오른쪽
- *   - 분수( fraction ): 바 아래 오른쪽
- * rate/solved/class 폰트 크기: 16
+ * LeetCode 다크 테마(배경=#0d1117) + "더 큰" 애니메이션 효과
+ * - 원형 그래프: 2초 동안 0 → dashVal
+ * - 하단 바: 2초 동안 0 → (circlePercent%) 길이
+ * - 텍스트(타이틀, rate/solved/class): 페이드 인 (opacity: 0→1)
  */
-function renderLeetTierCard({
+function renderAnimatedCard({
   tierGroup,
   tierSub,
   rating,
@@ -131,101 +130,134 @@ function renderLeetTierCard({
   const trackColor = "#30363d";
   const accentColor = "#f79a09";
 
-  // 원형 그래프 설정
+  // 원형 그래프
   const radius = 40;
   const circleCircum = 2 * Math.PI * radius;
   const dashVal = (circlePercent / 100) * circleCircum;
 
-  // 하단 진행 바
+  // 하단 바
   const barX = 20;
   const barY = 160;
   const barWidth = width - 40;
   const barHeight = 8;
 
-  // SMIL 애니메이션 (원형 그래프: 0 -> dashVal)
+  // 원형 그래프 애니메이션 (2초)
   const circleAnim = `
     <animate
       attributeName="stroke-dasharray"
       from="0, ${circleCircum}"
       to="${dashVal}, ${circleCircum - dashVal}"
-      dur="1s"
+      dur="2s"
       fill="freeze"
     />
   `;
 
-  // SMIL 애니메이션 (하단 바: width 0 -> barWidth * circlePercent/100)
+  // 하단 바 애니메이션 (2초)
   const barAnim = `
     <animate
       attributeName="width"
       from="0"
       to="${barWidth * (circlePercent / 100)}"
-      dur="1s"
+      dur="2s"
       fill="freeze"
     />
   `;
+
+  // 텍스트 페이드 인 (1.5초)
+  // (처음 opacity=0, 1.5초 동안 1로)
+  function fadeIn(begin = "0s") {
+    return `
+      <animate
+        attributeName="opacity"
+        from="0"
+        to="1"
+        dur="1.5s"
+        begin="${begin}"
+        fill="freeze"
+      />
+    `;
+  }
 
   return `
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
   <!-- 배경 -->
   <rect width="${width}" height="${height}" rx="10" fill="${bgColor}" />
 
-  <!-- 상단: 티어 + handle -->
-  <text x="20" y="30" fill="${textColor}" font-size="16" font-weight="bold">
+  <!-- 상단: 티어 + handle (페이드 인) -->
+  <text id="titleText" x="20" y="30" fill="${textColor}" font-size="16" font-weight="bold" opacity="0">
     ${tierGroup} ${tierSub}
+    ${fadeIn("0.3s")}
   </text>
-  <text x="${
+  <text id="handleText" x="${
     width - 20
-  }" y="30" text-anchor="end" fill="${textColor}" font-size="16" font-weight="bold">
+  }" y="30" text-anchor="end" fill="${textColor}" font-size="16" font-weight="bold" opacity="0">
     ${handle}
+    ${fadeIn("0.3s")}
   </text>
 
   <!-- 원형 그래프 (왼쪽) -->
   <circle
     cx="80" cy="100" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
-  />
+    opacity="0"
+  >
+    <!-- 배경 원도 페이드 인 -->
+    ${fadeIn("0.3s")}
+  </circle>
+
   <circle
     cx="80" cy="100" r="${radius}"
     stroke="${accentColor}" stroke-width="8" fill="none"
     stroke-dasharray="0, ${circleCircum}"
     stroke-linecap="round"
     transform="rotate(-90, 80, 100)"
+    opacity="0"
   >
+    <!-- 원 그래프 선도 페이드 인 & dasharray 애니메이션 -->
+    ${fadeIn("0.3s")}
     ${circleAnim}
   </circle>
-  <!-- 중앙 rating 숫자 -->
-  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="18" font-weight="bold">
+
+  <!-- 중앙 rating 숫자 (페이드 인) -->
+  <text x="80" y="105" text-anchor="middle" fill="${textColor}" font-size="18" font-weight="bold" opacity="0">
     ${rating}
+    ${fadeIn("1s")}
   </text>
 
-  <!-- 가운데 info: rate / solved / class (폰트 16으로 확대) -->
-  <g transform="translate(150, 70)">
+  <!-- 가운데 info: rate / solved / class (폰트 16, 페이드 인) -->
+  <g transform="translate(150, 70)" opacity="0">
+    ${fadeIn("0.7s")}
     <text x="0" y="0" fill="${textColor}" font-size="16">rate: ${rating}</text>
     <text x="0" y="25" fill="${textColor}" font-size="16">solved: ${solved}</text>
     <text x="0" y="50" fill="${textColor}" font-size="16">class: ${classNum}</text>
   </g>
 
-  <!-- 하단 진행 바 (트랙) -->
+  <!-- 하단 진행 바 (트랙, 페이드 인) -->
   <rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}"
-        fill="${trackColor}" rx="4" />
+        fill="${trackColor}" rx="4" opacity="0">
+    ${fadeIn("0.3s")}
+  </rect>
   <!-- 하단 진행 바 (채워지는 부분) -->
   <rect x="${barX}" y="${barY}" width="0" height="${barHeight}"
-        fill="${accentColor}" rx="4">
+        fill="${accentColor}" rx="4" opacity="0">
+    ${fadeIn("0.3s")}
     ${barAnim}
   </rect>
 
-  <!-- 바 위쪽 오른쪽: 퍼센트 -->
+  <!-- 바 위쪽 오른쪽: 퍼센트 (페이드 인) -->
   <text x="${width - 20}" y="${
     barY - 3
-  }" text-anchor="end" fill="${subTextColor}" font-size="14">
+  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
     ${percentText}
+    ${fadeIn("0.7s")}
   </text>
 
-  <!-- 바 아래 오른쪽: 분수 (fraction) -->
+  <!-- 바 아래 오른쪽: 분수 (fraction) (페이드 인) -->
   <text x="${width - 20}" y="${
     barY + barHeight + 15
-  }" text-anchor="end" fill="${subTextColor}" font-size="14">
+  }" text-anchor="end" fill="${subTextColor}" font-size="14" opacity="0">
     ${fractionText}
+    ${fadeIn("0.7s")}
   </text>
 </svg>
 `;
