@@ -42,9 +42,7 @@ module.exports = async (req, res) => {
 
   try {
     // 1. solved.ac API 호출
-    const { data } = await axios.get(
-      `https://solved.ac/api/v3/user/show?handle=${username}`
-    );
+    const { data } = await axios.get(`https://solved.ac/api/v3/user/show?handle=${username}`);
 
     // 2. 주요 정보
     const tierNum = data.tier || 0;
@@ -53,6 +51,9 @@ module.exports = async (req, res) => {
     const solved = data.solvedCount || 0;
     const classNum = data.class || 0;
     const handle = data.handle || username;
+    // 새로 추가할 필드
+    const rank = data.rank || 0;
+    const exp = data.exp || 0;
 
     // 티어 범위 (하단 바)
     const [minRating, maxRating] = getTierRange(tierNum);
@@ -70,7 +71,7 @@ module.exports = async (req, res) => {
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
     // 3. SVG 생성
-    const svg = renderBigTextAnimated({
+    const svg = renderBigTextWithExtraInfo({
       tierGroup,
       tierSub,
       rating,
@@ -80,6 +81,8 @@ module.exports = async (req, res) => {
       fractionText,
       percentText,
       circlePercent,
+      rank,
+      exp,
     });
 
     res.setHeader("Content-Type", "image/svg+xml");
@@ -107,10 +110,12 @@ function sendErrorCard(res, message) {
 
 /**
  * 🏆 LeetCode 다크 테마 + border + rx=10
- * 🏆 텍스트 크게 키움
- * 🏆 텍스트 페이드 인 + 원형 게이지 & 바 1초 애니
+ * 🏆 텍스트 크게
+ * 🏆 중간에 (rate/solved/class/rank/exp) 5줄
+ * 🏆 하단 바 y=160 (원래 위치)
+ * 🏆 SMIL 1초 애니 + 페이드 인
  */
-function renderBigTextAnimated({
+function renderBigTextWithExtraInfo({
   tierGroup,
   tierSub,
   rating,
@@ -120,6 +125,8 @@ function renderBigTextAnimated({
   fractionText,
   percentText,
   circlePercent,
+  rank,
+  exp,
 }) {
   const width = 450;
   const height = 200;
@@ -136,10 +143,9 @@ function renderBigTextAnimated({
   const circleCircum = 2 * Math.PI * radius;
   const dashVal = (circlePercent / 100) * circleCircum;
 
-  // 하단 바
+  // 하단 바 (원래대로 y=160)
   const barX = 20;
-  // y를 170으로 내려서 중앙에 여유
-  const barY = 170;
+  const barY = 160;
   const barWidth = width - 40;
   const barHeight = 8;
   const barFillWidth = Math.round((circlePercent / 100) * barWidth);
@@ -166,7 +172,7 @@ function renderBigTextAnimated({
     />
   `;
 
-  // 텍스트 페이드 인 (opacity=0 -> 1, dur=1s)
+  // 텍스트 페이드 인
   function fadeIn(begin = "0s") {
     return `
       <animate
@@ -195,9 +201,7 @@ function renderBigTextAnimated({
     ${tierGroup} ${tierSub}
     ${fadeIn("0s")}
   </text>
-  <text x="${
-    width - 20
-  }" y="35" text-anchor="end" fill="${textColor}" font-size="20" font-weight="bold" opacity="0">
+  <text x="${width - 20}" y="35" text-anchor="end" fill="${textColor}" font-size="20" font-weight="bold" opacity="0">
     ${handle}
     ${fadeIn("0s")}
   </text>
@@ -230,12 +234,14 @@ function renderBigTextAnimated({
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 가운데 info (rate/solved/class) -->
-  <g transform="translate(150, 70)" opacity="0">
+  <!-- 가운데 info (5줄) -->
+  <g transform="translate(150, 40)" opacity="0">
     ${fadeIn("0.2s")}
     <text x="0" y="0" fill="${textColor}" font-size="20">rate: ${rating}</text>
-    <text x="0" y="35" fill="${textColor}" font-size="20">solved: ${solved}</text>
-    <text x="0" y="70" fill="${textColor}" font-size="20">class: ${classNum}</text>
+    <text x="0" y="25" fill="${textColor}" font-size="20">solved: ${solved}</text>
+    <text x="0" y="50" fill="${textColor}" font-size="20">class: ${classNum}</text>
+    <text x="0" y="75" fill="${textColor}" font-size="20">rank: #${rank}</text>
+    <text x="0" y="100" fill="${textColor}" font-size="20">exp: ${exp}</text>
   </g>
 
   <!-- 하단 바 (트랙) -->
@@ -260,17 +266,13 @@ function renderBigTextAnimated({
   </rect>
 
   <!-- 바 위쪽 오른쪽: 퍼센트 -->
-  <text x="${width - 20}" y="${
-    barY - 3
-  }" text-anchor="end" fill="${subTextColor}" font-size="18" opacity="0">
+  <text x="${width - 20}" y="${barY - 3}" text-anchor="end" fill="${subTextColor}" font-size="18" opacity="0">
     ${percentText}
     ${fadeIn("0.4s")}
   </text>
 
   <!-- 바 아래 오른쪽: 분수 (fraction) -->
-  <text x="${width - 20}" y="${
-    barY + barHeight + 20
-  }" text-anchor="end" fill="${subTextColor}" font-size="18" opacity="0">
+  <text x="${width - 20}" y="${barY + barHeight + 20}" text-anchor="end" fill="${subTextColor}" font-size="18" opacity="0">
     ${fractionText}
     ${fadeIn("0.4s")}
   </text>
