@@ -71,7 +71,7 @@ module.exports = async (req, res) => {
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
     // SVG 생성
-    const svg = renderLargeCard({
+    const svg = renderLeftGaugeCard({
       tierGroup,
       tierSub,
       rating,
@@ -109,13 +109,13 @@ function sendErrorCard(res, message) {
 
 /**
  * 🏆 크기: 400×300
- * 🏆 상단 텍스트(티어/닉네임) 폰트 키움
- * 🏆 원형 게이지(cx=200, cy=150, r=60) → 중앙 하단
- * 🏆 가운데(하단부)에 4줄 info
- * 🏆 하단 바 y=280, 폰트=16
+ * 🏆 상단(티어/닉네임) 폰트 더 큼
+ * 🏆 왼쪽 큰 원형 게이지(cx=100, cy=150, r=60)
+ * 🏆 오른쪽 4줄 텍스트 (x=220, y=110)
+ * 🏆 하단 바 y=260
  * 🏆 SMIL 1초 + 텍스트 페이드 인
  */
-function renderLargeCard({
+function renderLeftGaugeCard({
   tierGroup,
   tierSub,
   rating,
@@ -138,20 +138,20 @@ function renderLargeCard({
   const accentColor = "#f79a09";
 
   // 원형 게이지
-  const radius = 60; // 좀 더 크게
-  const cx = 200;    // 수평 중앙
-  const cy = 150;    // 수직 중앙-ish
+  const radius = 60;
+  const cx = 100;
+  const cy = 150;
   const circleCircum = 2 * Math.PI * radius;
   const dashVal = (circlePercent / 100) * circleCircum;
 
   // 하단 바
   const barX = 20;
-  const barY = 280;
+  const barY = 260;
   const barWidth = width - 40; // 360
   const barHeight = 8;
   const barFillWidth = Math.round((circlePercent / 100) * barWidth);
 
-  // SMIL 애니 (1초)
+  // SMIL 애니
   const circleAnim = `
     <animate
       attributeName="stroke-dasharray"
@@ -211,7 +211,7 @@ function renderLargeCard({
     ${fadeIn("0s")}
   </text>
 
-  <!-- 원형 게이지 배경 -->
+  <!-- 원형 게이지 배경 (왼쪽) -->
   <circle
     cx="${cx}" cy="${cy}" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
@@ -233,15 +233,23 @@ function renderLargeCard({
     ${circleAnim}
   </circle>
 
-  <!-- 중앙 rating 숫자 (조금 더 크게) -->
-  <text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="${textColor}" font-size="30" font-weight="bold" opacity="0">
+  <!-- 중앙 rating 숫자 -->
+  <text
+    x="${cx}"
+    y="${cy + 5}"
+    text-anchor="middle"
+    fill="${textColor}"
+    font-size="30"
+    font-weight="bold"
+    opacity="0"
+  >
     ${rating}
     ${fadeIn("0.1s")}
   </text>
 
-  <!-- 가운데 info (4줄, 아래쪽에 배치) -->
-  <!-- x=50, y=200 => 라인 간격=25 => 4줄이면 0,25,50,75 => 최대 75 아래로 -->
-  <g transform="translate(50, 200)" opacity="0">
+  <!-- 오른쪽 4줄 텍스트 -->
+  <!-- transform="translate(220, 110)" => 약간 중간쯤 -->
+  <g transform="translate(220, 110)" opacity="0">
     ${fadeIn("0.2s")}
     <text x="0"  y="0"   fill="${textColor}" font-size="18">rate: ${rating}</text>
     <text x="0"  y="25"  fill="${textColor}" font-size="18">solved: ${solved}</text>
@@ -258,8 +266,6 @@ function renderLargeCard({
   >
     ${fadeIn("0.3s")}
   </rect>
-
-  <!-- 채워지는 부분 -->
   <rect
     x="${barX}" y="${barY}"
     width="0" height="${barHeight}"
@@ -271,16 +277,22 @@ function renderLargeCard({
   </rect>
 
   <!-- 바 위쪽 오른쪽: 퍼센트 -->
-  <text x="${width - 20}" y="${barY - 3}" text-anchor="end" fill="${subTextColor}" font-size="16" opacity="0">
+  <text
+    x="${width - 20}"
+    y="${barY - 3}"
+    text-anchor="end"
+    fill="${subTextColor}"
+    font-size="16"
+    opacity="0"
+  >
     ${percentText}
     ${fadeIn("0.4s")}
   </text>
 
   <!-- 바 아래 오른쪽: 분수 -->
-  <!-- y=barY + barHeight + 15 => 280 + 8 + 15=303 (3px from bottom) -->
   <text
     x="${width - 20}"
-    y="${barY + barHeight + 15}"
+    y="${barY + barHeight + 20}"
     text-anchor="end"
     fill="${subTextColor}"
     font-size="16"
