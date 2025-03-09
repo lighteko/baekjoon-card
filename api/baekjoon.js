@@ -101,7 +101,15 @@ function sendErrorCard(res, message) {
         fill="#101010"
         stroke="#404040" stroke-width="2"
       />
-      <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold">${message}</text>
+      <text 
+        x="20" y="65" 
+        fill="#fff" 
+        font-size="16" 
+        font-weight="bold"
+        font-family="Baloo 2, cursive, sans-serif"
+      >
+        ${message}
+      </text>
     </svg>`;
   res.setHeader("Content-Type", "image/svg+xml");
   res.send(errorSvg);
@@ -109,12 +117,8 @@ function sendErrorCard(res, message) {
 
 /**
  * 🏆 400×300 카드
- * 🏆 상단(티어/닉네임) 폰트=26
- * 🏆 원형 게이지(왼쪽) => 지름=120 => r=60 => 왼쪽이 x=20 => cx=80
- * 🏆 게이지 중앙 텍스트: dominant-baseline="middle", 폰트=36
- * 🏆 오른쪽 4줄 텍스트(x=220, y=110, 폰트=22, font-weight=bold, 첫 글자 대문자)
- * 🏆 하단 바 y=260
- * 🏆 SMIL 1초 + 텍스트 페이드 인
+ * 🏆 색상 유지 (#101010, #404040, #f79a09 등)
+ * 🏆 Baloo 2 폰트 지정 (폴백: cursive, sans-serif)
  */
 function renderLeftGaugeCard({
   tierGroup,
@@ -132,8 +136,8 @@ function renderLeftGaugeCard({
   const height = 300;
 
   const bgColor = "#101010";
-  const textColor = "#dcdcdc";
-  const contentTextColor = "#f1f1f0";
+  const textColor = "#dcdcdc";       // 상단 닉네임
+  const contentTextColor = "#f1f1f0"; // 게이지 중앙, 오른쪽 텍스트
   const subTextColor = "#C9D1D9";
   const trackColor = "#404040";
   const accentColor = "#f79a09";
@@ -146,10 +150,11 @@ function renderLeftGaugeCard({
 
   const barX = 20;
   const barY = 260;
-  const barWidth = width - 40;
+  const barWidth = width - 40; 
   const barHeight = 8;
   const barFillWidth = Math.round((circlePercent / 100) * barWidth);
 
+  // SMIL
   const circleAnim = `
     <animate
       attributeName="stroke-dasharray"
@@ -197,12 +202,25 @@ function renderLeftGaugeCard({
     stroke="${trackColor}" stroke-width="2"
   />
 
-  <!-- 상단 텍스트 -->
-  <text x="20" y="50" fill="#ffffff" font-size="26" font-weight="bold" opacity="0">
+  <!-- 상단 텍스트 (티어 / 닉네임) -->
+  <text 
+    x="20" y="50" 
+    fill="#ffffff" 
+    font-size="26" font-weight="bold" 
+    font-family="Baloo 2, cursive, sans-serif"
+    opacity="0"
+  >
     ${tierGroup} ${tierSub}
     ${fadeIn("0s")}
   </text>
-  <text x="${width - 20}" y="50" text-anchor="end" fill="${textColor}" font-size="26" font-weight="bold" opacity="0">
+  <text 
+    x="${width - 20}" y="50" 
+    text-anchor="end" 
+    fill="${textColor}" 
+    font-size="26" font-weight="bold"
+    font-family="Baloo 2, cursive, sans-serif"
+    opacity="0"
+  >
     ${handle}
     ${fadeIn("0s")}
   </text>
@@ -236,6 +254,7 @@ function renderLeftGaugeCard({
     fill="${contentTextColor}"
     font-size="36"
     font-weight="bold"
+    font-family="Baloo 2, cursive, sans-serif"
     opacity="0"
   >
     ${rating}
@@ -245,33 +264,81 @@ function renderLeftGaugeCard({
   <!-- 오른쪽 4줄 -->
   <g transform="translate(220, 110)" opacity="0">
     ${fadeIn("0.2s")}
-    <text x="0" y="0" fill="${contentTextColor}" font-size="22" font-weight="bold">Rate: ${rating}</text>
-    <text x="0" y="30" fill="${contentTextColor}" font-size="22" font-weight="bold">Solved: ${solved}</text>
-    <text x="0" y="60" fill="${contentTextColor}" font-size="22" font-weight="bold">Class: ${classNum}</text>
-    <text x="0" y="90" fill="${contentTextColor}" font-size="22" font-weight="bold">Rank: #${rank}</text>
+    <text 
+      x="0" y="0" 
+      fill="${contentTextColor}" 
+      font-size="22" font-weight="bold"
+      font-family="Baloo 2, cursive, sans-serif"
+    >
+      Rate: ${rating}
+    </text>
+    <text 
+      x="0" y="30" 
+      fill="${contentTextColor}" 
+      font-size="22" font-weight="bold"
+      font-family="Baloo 2, cursive, sans-serif"
+    >
+      Solved: ${solved}
+    </text>
+    <text 
+      x="0" y="60" 
+      fill="${contentTextColor}" 
+      font-size="22" font-weight="bold"
+      font-family="Baloo 2, cursive, sans-serif"
+    >
+      Class: ${classNum}
+    </text>
+    <text 
+      x="0" y="90" 
+      fill="${contentTextColor}" 
+      font-size="22" font-weight="bold"
+      font-family="Baloo 2, cursive, sans-serif"
+    >
+      Rank: #${rank}
+    </text>
   </g>
 
   <!-- 하단 바 -->
-  <rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}"
-    fill="${trackColor}" rx="4" opacity="0">
+  <rect 
+    x="${barX}" y="${barY}" 
+    width="${barWidth}" height="${barHeight}"
+    fill="${trackColor}" rx="4" opacity="0"
+  >
     ${fadeIn("0.3s")}
   </rect>
-  <rect x="${barX}" y="${barY}" width="0" height="${barHeight}"
-    fill="${accentColor}" rx="4" opacity="0">
+  <rect 
+    x="${barX}" y="${barY}" 
+    width="0" height="${barHeight}"
+    fill="${accentColor}" rx="4" opacity="0"
+  >
     ${fadeIn("0.3s")}
     ${barAnim}
   </rect>
 
   <!-- 바 위쪽 오른쪽 -->
-  <text x="${width - 20}" y="${barY - 3}" text-anchor="end"
-    fill="${subTextColor}" font-size="16" opacity="0">
+  <text 
+    x="${width - 20}" 
+    y="${barY - 3}" 
+    text-anchor="end"
+    fill="${subTextColor}" 
+    font-size="16" 
+    font-family="Baloo 2, cursive, sans-serif"
+    opacity="0"
+  >
     ${percentText}
     ${fadeIn("0.4s")}
   </text>
 
   <!-- 바 아래 오른쪽 -->
-  <text x="${width - 20}" y="${barY + barHeight + 20}" text-anchor="end"
-    fill="${subTextColor}" font-size="16" opacity="0">
+  <text 
+    x="${width - 20}" 
+    y="${barY + barHeight + 20}" 
+    text-anchor="end"
+    fill="${subTextColor}" 
+    font-size="16"
+    font-family="Baloo 2, cursive, sans-serif"
+    opacity="0"
+  >
     ${fractionText}
     ${fadeIn("0.4s")}
   </text>
