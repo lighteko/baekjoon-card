@@ -151,13 +151,13 @@ function renderLeftGaugeCard({
   const cx = 80;
   const cy = 150;
   const circleCircum = 2 * Math.PI * radius;
-  const dashVal = circlePercent * circleCircum;
+  const dashVal = (circlePercent / 100) * circleCircum;
 
   const barX = 20;
   const barY = 260;
   const barWidth = width - 40; 
   const barHeight = 8;
-  const barFillWidth = barPercent * barWidth;
+  const barFillWidth = Math.round(barPercent / 100) * barWidth;
 
   // SMIL
   const circleAnim = `
