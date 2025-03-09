@@ -1,6 +1,38 @@
 const axios = require("axios");
 
-/** ... (위의 함수들은 동일) ... */
+/** 티어 번호(1~30)를 "Bronze IV" 형태로 변환 */
+function getTierNameAndNumber(tierNum) {
+  if (tierNum < 1 || tierNum > 30) {
+    return { tierGroup: "Unranked", tierSub: "" };
+  }
+  const groups = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"];
+  const subTiers = ["V", "IV", "III", "II", "I"];
+
+  const groupIndex = Math.floor((tierNum - 1) / 5);
+  const subIndex = (tierNum - 1) % 5;
+  return {
+    tierGroup: groups[groupIndex],
+    tierSub: subTiers[subIndex],
+  };
+}
+
+/** 티어 번호별 대략적 레이팅 범위 (예시) */
+function getTierRange(tierNum) {
+  if (tierNum >= 1 && tierNum <= 5) {
+    return [800, 1299];
+  } else if (tierNum <= 10) {
+    return [1300, 1599];
+  } else if (tierNum <= 15) {
+    return [1600, 1899];
+  } else if (tierNum <= 20) {
+    return [1900, 2199];
+  } else if (tierNum <= 25) {
+    return [2200, 2699];
+  } else if (tierNum <= 30) {
+    return [2700, 4000];
+  }
+  return [0, 4000]; // Unranked
+}
 
 module.exports = async (req, res) => {
   const { username } = req.query;
@@ -9,10 +41,12 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // solved.ac API로 사용자 정보
     const { data } = await axios.get(
       `https://solved.ac/api/v3/user/show?handle=${username}`
     );
 
+    // 주요 정보
     const tierNum = data.tier || 0;
     const { tierGroup, tierSub } = getTierNameAndNumber(tierNum);
     const rating = data.rating || 0;
@@ -21,18 +55,22 @@ module.exports = async (req, res) => {
     const handle = data.handle || username;
     const rank = data.rank || 0;
 
+    // 티어 범위
     const [minRating, maxRating] = getTierRange(tierNum);
     let clamp = Math.max(rating, minRating);
     clamp = Math.min(clamp, maxRating);
     const ratio = (clamp - minRating) / (maxRating - minRating);
     const progressPercent = Math.round(ratio * 100);
 
+    // 하단 바 텍스트
     const fractionText = `${rating} / ${maxRating}`;
     const percentText = `${progressPercent}%`;
 
+    // 원형 게이지 퍼센트 (rating / 4000)
     const ratingCapped = Math.min(rating, 4000);
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
+    // 최종 SVG
     const svg = renderLeftGaugeCard({
       tierGroup,
       tierSub,
@@ -63,9 +101,7 @@ function sendErrorCard(res, message) {
         fill="#101010"
         stroke="#404040" stroke-width="2"
       />
-      <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold" font-family="Baloo 2, cursive, sans-serif">
-        ${message}
-      </text>
+      <text x="20" y="65" fill="#fff" font-size="16" font-weight="bold">${message}</text>
     </svg>`;
   res.setHeader("Content-Type", "image/svg+xml");
   res.send(errorSvg);
@@ -73,7 +109,12 @@ function sendErrorCard(res, message) {
 
 /**
  * 🏆 400×300 카드
- * 🏆 Baloo 2 폰트 지정 (실제로는 폴백될 수도 있음)
+ * 🏆 상단(티어/닉네임) 폰트=26
+ * 🏆 원형 게이지(왼쪽) => 지름=120 => r=60 => 왼쪽이 x=20 => cx=80
+ * 🏆 게이지 중앙 텍스트: dominant-baseline="middle", 폰트=36
+ * 🏆 오른쪽 4줄 텍스트(x=220, y=110, 폰트=22, font-weight=bold, 첫 글자 대문자)
+ * 🏆 하단 바 y=260
+ * 🏆 SMIL 1초 + 텍스트 페이드 인
  */
 function renderLeftGaugeCard({
   tierGroup,
@@ -157,18 +198,16 @@ function renderLeftGaugeCard({
   />
 
   <!-- 상단 텍스트 -->
-  <text x="20" y="50" fill="${textColor}" font-size="26" font-weight="bold" 
-    font-family="Baloo 2, cursive, sans-serif" opacity="0">
+  <text x="20" y="50" fill="#ffffff" font-size="26" font-weight="bold" opacity="0">
     ${tierGroup} ${tierSub}
     ${fadeIn("0s")}
   </text>
-  <text x="${width - 20}" y="50" text-anchor="end" fill="${textColor}" font-size="26" font-weight="bold" 
-    font-family="Baloo 2, cursive, sans-serif" opacity="0">
+  <text x="${width - 20}" y="50" text-anchor="end" fill="${textColor}" font-size="26" font-weight="bold" opacity="0">
     ${handle}
     ${fadeIn("0s")}
   </text>
 
-  <!-- 게이지 배경 -->
+  <!-- 원형 게이지 배경 -->
   <circle
     cx="${cx}" cy="${cy}" r="${radius}"
     stroke="${trackColor}" stroke-width="8" fill="none"
@@ -190,10 +229,13 @@ function renderLeftGaugeCard({
 
   <!-- 중앙 rating -->
   <text
-    x="${cx}" y="${cy}"
-    text-anchor="middle" dominant-baseline="middle"
-    fill="${contentTextColor}" font-size="36" font-weight="bold"
-    font-family="Baloo 2, cursive, sans-serif"
+    x="${cx}"
+    y="${cy}"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    fill="${contentTextColor}"
+    font-size="36"
+    font-weight="bold"
     opacity="0"
   >
     ${rating}
@@ -203,18 +245,10 @@ function renderLeftGaugeCard({
   <!-- 오른쪽 4줄 -->
   <g transform="translate(220, 110)" opacity="0">
     ${fadeIn("0.2s")}
-    <text x="0" y="0" fill="${contentTextColor}" font-size="22" font-weight="bold" font-family="Baloo 2, cursive, sans-serif">
-      Rate: ${rating}
-    </text>
-    <text x="0" y="30" fill="${contentTextColor}" font-size="22" font-weight="bold" font-family="Baloo 2, cursive, sans-serif">
-      Solved: ${solved}
-    </text>
-    <text x="0" y="60" fill="${contentTextColor}" font-size="22" font-weight="bold" font-family="Baloo 2, cursive, sans-serif">
-      Class: ${classNum}
-    </text>
-    <text x="0" y="90" fill="${contentTextColor}" font-size="22" font-weight="bold" font-family="Baloo 2, cursive, sans-serif">
-      Rank: #${rank}
-    </text>
+    <text x="0" y="0" fill="${contentTextColor}" font-size="22" font-weight="bold">Rate: ${rating}</text>
+    <text x="0" y="30" fill="${contentTextColor}" font-size="22" font-weight="bold">Solved: ${solved}</text>
+    <text x="0" y="60" fill="${contentTextColor}" font-size="22" font-weight="bold">Class: ${classNum}</text>
+    <text x="0" y="90" fill="${contentTextColor}" font-size="22" font-weight="bold">Rank: #${rank}</text>
   </g>
 
   <!-- 하단 바 -->
@@ -229,17 +263,15 @@ function renderLeftGaugeCard({
   </rect>
 
   <!-- 바 위쪽 오른쪽 -->
-  <text x="${width - 20}" y="${barY - 3}" text-anchor="end" 
-    fill="${subTextColor}" font-size="16" opacity="0" 
-    font-family="Baloo 2, cursive, sans-serif">
+  <text x="${width - 20}" y="${barY - 3}" text-anchor="end"
+    fill="${subTextColor}" font-size="16" opacity="0">
     ${percentText}
     ${fadeIn("0.4s")}
   </text>
 
   <!-- 바 아래 오른쪽 -->
   <text x="${width - 20}" y="${barY + barHeight + 20}" text-anchor="end"
-    fill="${subTextColor}" font-size="16" opacity="0"
-    font-family="Baloo 2, cursive, sans-serif">
+    fill="${subTextColor}" font-size="16" opacity="0">
     ${fractionText}
     ${fadeIn("0.4s")}
   </text>
