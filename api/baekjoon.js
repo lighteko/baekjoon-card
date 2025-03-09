@@ -71,7 +71,7 @@ module.exports = async (req, res) => {
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
     // 하단 바 게이지 퍼센트 (rating / 현재 티어 최댓값)
-    const barPercent = Math.round((ratingCapped / getTierRange(ratingCapped)[1]) * 100);
+    const barPercent = Math.round((ratingCapped / getTierRange(tierNum)[1]) * 100);
 
     // 최종 SVG
     const svg = renderLeftGaugeCard({
