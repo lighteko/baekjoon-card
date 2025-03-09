@@ -19,7 +19,7 @@ function getTierNameAndNumber(tierNum) {
 /** 티어 번호별 대략적 레이팅 범위 (예시) */
 function getTierRange(tierNum) {
   if (tierNum >= 1 && tierNum <= 5) {
-    return [800, 1299];
+    return [0, 1299];
   } else if (tierNum <= 10) {
     return [1300, 1599];
   } else if (tierNum <= 15) {
