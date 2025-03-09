@@ -70,6 +70,9 @@ module.exports = async (req, res) => {
     const ratingCapped = Math.min(rating, 4000);
     const circlePercent = Math.round((ratingCapped / 4000) * 100);
 
+    // 하단 바 게이지 퍼센트 (rating / 현재 티어 최댓값)
+    const barPercent = Math.round((ratingCapped / getTierRange(ratingCapped)[1]) * 100);
+
     // 최종 SVG
     const svg = renderLeftGaugeCard({
       tierGroup,
@@ -82,6 +85,7 @@ module.exports = async (req, res) => {
       percentText,
       circlePercent,
       rank,
+      barPercent,
     });
 
     res.setHeader("Content-Type", "image/svg+xml");
@@ -131,6 +135,7 @@ function renderLeftGaugeCard({
   percentText,
   circlePercent,
   rank,
+  barPercent
 }) {
   const width = 400;
   const height = 300;
@@ -152,7 +157,7 @@ function renderLeftGaugeCard({
   const barY = 260;
   const barWidth = width - 40; 
   const barHeight = 8;
-  const barFillWidth = Math.round((circlePercent / 100) * barWidth);
+  const barFillWidth = (barPercent / 100) * barWidth;
 
   // SMIL
   const circleAnim = `
